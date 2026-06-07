@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+/*
+ * Huisstijl Talenti a Casa — design tokens.
+ * Afgeleid van het logo (groen "Talenti", blauw "a Casa", geel accent).
+ * Pas hier de waarden aan zodra de officiële huisstijlgids beschikbaar is;
+ * de hele look volgt automatisch.
+ */
+:root {
+  --brand-green: #6fa539;
+  --brand-green-700: #58862c;
+  --brand-green-50: #eef5e3;
+  --brand-blue: #1c8fc9;
+  --brand-blue-700: #166f9c;
+  --brand-blue-50: #e4f2fa;
+  --brand-yellow: #f5b61e;
+  --brand-yellow-50: #fdf3d9;
+
+  --bg: #f8faf4;
+  --surface: #ffffff;
+  --surface-2: #f3f6ee;
+  --border: #e6ece0;
+  --text: #1f2d24;
+  --muted: #6b7775;
+
+  --ok: #4f9d4d;
+  --warn: #e0962a;
+  --bad: #d05a4a;
+
+  --radius: 1rem;
+  --shadow-soft: 0 1px 2px rgba(31, 45, 36, 0.04), 0 8px 24px rgba(31, 45, 36, 0.06);
+  --shadow-hover: 0 2px 6px rgba(31, 45, 36, 0.06), 0 14px 36px rgba(31, 45, 36, 0.1);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+
+  --color-brand: var(--brand-green);
+  --color-brand-700: var(--brand-green-700);
+  --color-brand-50: var(--brand-green-50);
+  --color-blue: var(--brand-blue);
+  --color-blue-700: var(--brand-blue-700);
+  --color-blue-50: var(--brand-blue-50);
+  --color-accent: var(--brand-yellow);
+  --color-accent-50: var(--brand-yellow-50);
+
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+
+  --radius-card: var(--radius);
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d6ded0;
+  border-radius: 9999px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c2ccba;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-in {
+  animation: fade-in-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+/* Print / PDF-rapportage */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #ffffff;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-break {
+    break-inside: avoid;
+  }
+}
