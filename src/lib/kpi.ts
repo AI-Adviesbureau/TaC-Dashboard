@@ -268,6 +268,69 @@ export async function getPerGemeente(
   }));
 }
 
+export interface GemeentePrognoseRow {
+  gemeente: string;
+  aantal: number;
+  lopend: number;
+  aangevraagd: number;
+  gedeclareerd: number;
+  resterend: number;
+  prognose: number;
+  prognose_resterend: number;
+}
+
+/**
+ * Budget per gemeente: aangevraagd (K+L), gedeclareerd (som maanden), resterend
+ * en prognose op basis van het huidige maandtempo bij lopende trajecten.
+ */
+export async function getGemeentePrognose(f: Filters): Promise<GemeentePrognoseRow[]> {
+  const { clause, params } = buildWhere(f, "t", ["t.gemeente IS NOT NULL"]);
+  const text = `
+    SELECT gemeente,
+      count(*)::int AS aantal,
+      count(*) FILTER (WHERE lopend)::int AS lopend,
+      coalesce(sum(omzet), 0) AS aangevraagd,
+      coalesce(sum(realisatie), 0) AS gedeclareerd,
+      coalesce(sum(omzet), 0) - coalesce(sum(realisatie), 0) AS resterend,
+      coalesce(sum(
+        CASE
+          WHEN NOT lopend THEN realisatie
+          WHEN omzet <= 0 AND realisatie > 0 THEN
+            realisatie + GREATEST(
+              COALESCE(NULLIF(periode, 0), 12) - COALESCE(doorlooptijd, 0),
+              0
+            ) * (realisatie / GREATEST(COALESCE(doorlooptijd, 1), 0.5))
+          WHEN omzet <= 0 THEN realisatie
+          WHEN doorlooptijd IS NULL OR doorlooptijd <= 0 THEN omzet
+          ELSE LEAST(
+            omzet,
+            realisatie + GREATEST(
+              COALESCE(NULLIF(periode, 0), doorlooptijd, 12) - doorlooptijd,
+              0
+            ) * (realisatie / GREATEST(doorlooptijd, 0.5))
+          )
+        END
+      ), 0) AS prognose
+    FROM traject_uniek t ${clause}
+    GROUP BY gemeente
+    ORDER BY aangevraagd DESC, gemeente`;
+  const rows = (await sql.query(text, params)) as Record<string, unknown>[];
+  return rows.map((r) => {
+    const aangevraagd = Number(r.aangevraagd);
+    const prognose = Number(r.prognose);
+    return {
+      gemeente: String(r.gemeente),
+      aantal: Number(r.aantal),
+      lopend: Number(r.lopend),
+      aangevraagd,
+      gedeclareerd: Number(r.gedeclareerd),
+      resterend: Number(r.resterend),
+      prognose,
+      prognose_resterend: aangevraagd - prognose,
+    };
+  });
+}
+
 /** Verdeling per productcode (top N). */
 export async function getPerCode(
   f: Filters,

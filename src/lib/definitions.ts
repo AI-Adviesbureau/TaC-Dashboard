@@ -12,4 +12,10 @@ export const DEFINITIES = {
     "Aantal trajecten in de selectie. Tussen haakjes het aantal lopende trajecten (zonder einddatum).",
   marge:
     "Omzet/budget minus inkoopkosten en 20% overhead, voor de huidige selectie.",
+  aangevraagdBudget:
+    "Som van BEDRAG sp + BEDRAG (kolommen K en L) per traject — het bij de gemeente aangevraagde budget. Niet altijd ingevuld in de bron.",
+  gedeclareerdBudget:
+    "Som van de maandkolommen (jan–dec) — werkelijk gedeclareerde bedragen per traject.",
+  budgetPrognose:
+    "Verwacht totaalverbruik: bij afgesloten trajecten de gedeclareerde som; bij lopende trajecten extrapolatie op basis van het huidige maandtempo tot het einde van de beschikte periode (max. het aangevraagde budget).",
 } as const;

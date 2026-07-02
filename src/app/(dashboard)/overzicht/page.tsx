@@ -12,6 +12,7 @@ import { Skeleton, EmptyState, ErrorState } from "@/components/ui/states";
 import { TrendChart } from "@/components/charts/trend-chart";
 import { BarList } from "@/components/charts/bar-list";
 import { Histogram } from "@/components/charts/histogram";
+import { GemeentePrognoseTable } from "@/components/charts/gemeente-prognose-table";
 import { DEFINITIES } from "@/lib/definitions";
 import {
   fmtMaanden,
@@ -20,13 +21,14 @@ import {
   fmtGetal,
   fmtEuroKort,
 } from "@/lib/format";
-import type { OverzichtData } from "@/lib/kpi";
+import type { OverzichtData, GemeentePrognoseRow } from "@/lib/kpi";
 
 type TrendPunt = { label: string; instroom: number; uitstroom: number; omzet: number };
 type Breakdown = {
   gemeente: { gemeente: string; aantal: number; omzet: number; gem_dlt: number | null }[];
   code: { code: string; aantal: number; omzet: number }[];
   doorlooptijd: { bucket: string; aantal: number }[];
+  prognose: GemeentePrognoseRow[];
 };
 
 export default function OverzichtPage() {
@@ -153,6 +155,25 @@ export default function OverzichtPage() {
             <TrendChart data={tr.data} />
           ) : (
             <EmptyState title="Geen trajecten in deze selectie" />
+          )}
+        </div>
+      </Card>
+
+      {/* Budgetprognose per gemeente */}
+      <Card className="animate-in">
+        <CardHeader
+          title="Budgetprognose per gemeente"
+          subtitle="Aangevraagd (K+L), gedeclareerd (maanden) en verwacht eindverbruik"
+        />
+        <div className="px-2 pb-4 pt-1">
+          {bd.loading ? (
+            <Skeleton className="mx-3 h-72 w-[calc(100%-1.5rem)]" />
+          ) : bd.error ? (
+            <ErrorState message={bd.error} />
+          ) : bd.data && bd.data.prognose?.length ? (
+            <GemeentePrognoseTable rows={bd.data.prognose} />
+          ) : (
+            <EmptyState title="Geen budgetgegevens in deze selectie" />
           )}
         </div>
       </Card>
