@@ -1,6 +1,7 @@
 import "server-only";
 import { sql } from "./db";
 import { addGemeenteFilter } from "./filter-sql";
+import { ensureTrajectUniekView } from "./schema";
 
 export interface Filters {
   regio?: string | null;
@@ -284,6 +285,7 @@ export interface GemeentePrognoseRow {
  * en prognose op basis van het huidige maandtempo bij lopende trajecten.
  */
 export async function getGemeentePrognose(f: Filters): Promise<GemeentePrognoseRow[]> {
+  await ensureTrajectUniekView();
   const { clause, params } = buildWhere(f, "t", ["t.gemeente IS NOT NULL"]);
   const text = `
     SELECT gemeente,

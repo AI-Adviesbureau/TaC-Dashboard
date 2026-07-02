@@ -9,6 +9,7 @@
  */
 import * as XLSX from "xlsx";
 import { sql } from "./db";
+import { ensureTrajectUniekView } from "./schema";
 import {
   normaliseerGemeente,
   bepaalRegio,
@@ -304,28 +305,7 @@ export async function createSchema() {
   await sql`CREATE INDEX traject_gemeente_idx ON traject (gemeente)`;
   await sql`CREATE INDEX traject_rel_idx ON traject (rel_nr)`;
   await sql`CREATE INDEX traject_code_idx ON traject (code)`;
-  await sql`DROP VIEW IF EXISTS traject_uniek`;
-  await sql`
-    CREATE VIEW traject_uniek AS
-    SELECT
-      min(id) AS id, rel_nr, min(intake) AS intake, max(eind) AS eind,
-      COALESCE(EXTRACT(YEAR FROM min(intake))::int, min(bron_jaar)) AS jaar,
-      EXTRACT(MONTH FROM min(intake))::int AS maand_nr,
-      (array_agg(gemeente ORDER BY bron_jaar DESC))[1] AS gemeente,
-      (array_agg(regio ORDER BY bron_jaar DESC))[1] AS regio,
-      (array_agg(behandelaar_primair ORDER BY bron_jaar DESC))[1] AS behandelaar_primair,
-      (array_agg(rb ORDER BY bron_jaar DESC))[1] AS rb,
-      (array_agg(code ORDER BY bron_jaar DESC))[1] AS code,
-      bool_and(lopend) AS lopend, max(doorlooptijd) AS doorlooptijd,
-      max(omzet) AS omzet,
-      max(NULLIF(periode, 0)) AS periode,
-      max(inkoop_beh + inkoop_rb) AS inkoop,
-      sum(realisatie_totaal) AS realisatie, sum(overhead) AS overhead,
-      sum(betaald_bedrag) AS betaald_bedrag,
-      (array_agg(openstaand ORDER BY bron_jaar DESC))[1] AS openstaand,
-      bool_or(betaald) AS betaald
-    FROM traject
-    GROUP BY rel_nr, coalesce(to_char(intake,'YYYY-MM-DD'), 'noid:'||id::text)`;
+  await ensureTrajectUniekView();
 
   await sql`DROP TABLE IF EXISTS plek`;
   await sql`CREATE TABLE plek (id SERIAL PRIMARY KEY, volgnr INT, maanden JSONB, bezette_maanden INT DEFAULT 0)`;
