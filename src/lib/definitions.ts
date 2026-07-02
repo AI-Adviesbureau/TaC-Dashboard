@@ -7,7 +7,7 @@ export const DEFINITIES = {
   duurzameUitstroom:
     "Aandeel afgesloten trajecten waarbij de cliënt binnen 12 maanden na de einddatum geen nieuw traject start (geen heraanmelding). Alleen trajecten waarvan dit venster van 12 maanden al is verstreken tellen mee.",
   budgetrealisatie:
-    "Gerealiseerde omzet afgezet tegen het afgesproken budgetplafond per gemeente/regio. Toon zodra de plafonds zijn aangeleverd.",
+    "Gerealiseerde omzet (som maanddeclaraties) afgezet tegen het afgesproken plafond. Bij een gemeente-filter telt alleen het plafond van die gemeente(n). Jaar is verplicht.",
   trajecten:
     "Aantal trajecten in de selectie. Tussen haakjes het aantal lopende trajecten (zonder einddatum).",
   marge:

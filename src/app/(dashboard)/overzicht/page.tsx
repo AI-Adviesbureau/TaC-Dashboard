@@ -112,7 +112,13 @@ export default function OverzichtPage() {
           accent="green"
           loading={ov.loading}
           value={k?.uitstroom.pct != null ? fmtProcent(k.uitstroom.pct, 1) : "—"}
-          hint={k ? `${fmtGetal(k.uitstroom.duurzaam)} / ${fmtGetal(k.uitstroom.totaal)} afgerond` : undefined}
+          hint={
+            k
+              ? k.uitstroom.totaal > 0
+                ? `${fmtGetal(k.uitstroom.duurzaam)} / ${fmtGetal(k.uitstroom.totaal)} afgerond`
+                : "nog niet meetbaar (12 mnd opvolging)"
+              : undefined
+          }
           definitie={DEFINITIES.duurzameUitstroom}
         />
         <KpiCard

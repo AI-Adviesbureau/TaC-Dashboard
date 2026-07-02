@@ -7,9 +7,10 @@ export function addGemeenteFilter(
   if (!gemeente) return;
   const list = (Array.isArray(gemeente) ? gemeente : [gemeente]).filter(Boolean);
   if (list.length === 0) return;
+  const prefix = alias ? `${alias}.` : "";
   if (list.length === 1) {
-    add((n) => `${alias}.gemeente = $${n}`, list[0]);
+    add((n) => `${prefix}gemeente = $${n}`, list[0]);
   } else {
-    add((n) => `${alias}.gemeente = ANY($${n}::text[])`, list);
+    add((n) => `${prefix}gemeente = ANY($${n}::text[])`, list);
   }
 }

@@ -141,6 +141,10 @@ async function budgetRealisatie(
     params.push(f.regio);
     conds.push(`(regio = $${params.length} OR regio IS NULL)`);
   }
+  addGemeenteFilter(f.gemeente, "", (cond, val) => {
+    params.push(val);
+    conds.push(cond(params.length));
+  });
   const clause = conds.length ? "WHERE " + conds.join(" AND ") : "";
   const text = `SELECT coalesce(sum(plafond_bedrag), 0) AS plafond, count(*)::int AS n FROM budget_plafond ${clause}`;
   const rows = (await sql.query(text, params)) as { plafond: number; n: number }[];
