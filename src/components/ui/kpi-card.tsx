@@ -45,11 +45,14 @@ export function KpiCard({
         : "var(--brand-green-50)";
 
   return (
-    <Card className="group relative overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-hover)]">
-      <div
-        className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-60 transition-transform duration-500 group-hover:scale-125"
-        style={{ background: accentBg }}
-      />
+    <Card className="group relative p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-hover)]">
+      {/* Decoratief hoekje — apart geclipt zodat de info-tooltip niet wordt afgeknipt */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[var(--radius-card)]">
+        <div
+          className="absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-60 transition-transform duration-500 group-hover:scale-125"
+          style={{ background: accentBg }}
+        />
+      </div>
       <div className="relative flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">

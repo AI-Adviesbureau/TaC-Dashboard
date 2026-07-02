@@ -1,6 +1,7 @@
 import "server-only";
 import { sql } from "./db";
 import type { Filters } from "./kpi";
+import { addGemeenteFilter } from "./filter-sql";
 import type { TrajectRow } from "./types";
 
 export type { TrajectRow };
@@ -33,7 +34,7 @@ function buildWhere(f: TrajectFilters, search?: string) {
   if (f.maand) add((n) => `t.maand_nr = $${n}`, f.maand);
   if (f.van) add((n) => `t.intake >= $${n}`, f.van);
   if (f.tot) add((n) => `t.intake <= $${n}`, f.tot);
-  if (f.gemeente) add((n) => `t.gemeente = $${n}`, f.gemeente);
+  addGemeenteFilter(f.gemeente, "t", add);
   if (f.code) add((n) => `t.code = $${n}`, f.code);
   if (f.behandelaar) add((n) => `t.behandelaar_primair = $${n}`, f.behandelaar);
   if (f.rb) add((n) => `t.rb = $${n}`, f.rb);

@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Target, Tag, UserCog, KeyRound } from "lucide-react";
+import { Database, Target, Tag, UserCog, KeyRound } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { DataTab } from "./data-tab";
 import { PlafondsTab } from "./plafonds-tab";
 import { CodesTab } from "./codes-tab";
 import { BehandelarenTab } from "./behandelaren-tab";
 import { AccountTab } from "./account-tab";
 
 const TABS = [
+  { key: "data", label: "Data", icon: Database },
   { key: "plafonds", label: "Budgetplafonds", icon: Target },
   { key: "codes", label: "Productcodes", icon: Tag },
   { key: "behandelaren", label: "Behandelaren", icon: UserCog },
@@ -18,7 +20,7 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 export default function BeheerPage() {
-  const [tab, setTab] = useState<TabKey>("plafonds");
+  const [tab, setTab] = useState<TabKey>("data");
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-5">
@@ -45,6 +47,7 @@ export default function BeheerPage() {
       </div>
 
       <div className="animate-in">
+        {tab === "data" && <DataTab />}
         {tab === "plafonds" && <PlafondsTab />}
         {tab === "codes" && <CodesTab />}
         {tab === "behandelaren" && <BehandelarenTab />}

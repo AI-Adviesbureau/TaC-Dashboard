@@ -61,7 +61,7 @@ export interface TrajectRow {
 /** Bouwt een query-string voor de API op basis van de globale filters. */
 export function filtersToQuery(
   f: GlobalFilters,
-  extra?: Record<string, string | number | undefined | null>
+  extra?: Record<string, string | number | string[] | undefined | null>
 ): string {
   const p = new URLSearchParams();
   if (f.regio && f.regio !== "Totaal") p.set("regio", f.regio);
@@ -71,7 +71,12 @@ export function filtersToQuery(
   if (f.tot) p.set("tot", f.tot);
   if (extra) {
     for (const [k, v] of Object.entries(extra)) {
-      if (v !== undefined && v !== null && v !== "") p.set(k, String(v));
+      if (v === undefined || v === null || v === "") continue;
+      if (Array.isArray(v)) {
+        if (v.length) p.set(k, v.join(","));
+      } else {
+        p.set(k, String(v));
+      }
     }
   }
   const s = p.toString();

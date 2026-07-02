@@ -22,8 +22,10 @@ met **Neon (Postgres)** als database en een eigen **loginscherm**.
   **CSV én Excel**. Toont uitsluitend het relatienummer — **nooit naam of BSN**.
 - **Drill-down**: klik in het overzicht op een gemeente of code → direct de
   bijbehorende trajecten.
-- **Beheer**: budgetplafonds invoeren (activeert de budgetrealisatie-KPI),
-  productcode-omschrijvingen, behandelaar-namen, en eigen wachtwoord wijzigen.
+- **Beheer**: **data uploaden** (Excel via de browser → Neon, met datasamenvatting
+  en een "Data wissen"-knop), budgetplafonds invoeren (activeert de
+  budgetrealisatie-KPI), productcode-omschrijvingen, behandelaar-namen, en eigen
+  wachtwoord wijzigen.
 - **Maandrapportage (PDF)**: knop "Exporteer rapportage" op het overzicht opent
   een print-klare rapportage (`/rapportage`) in huisstijl — opslaan als PDF voor
   het MT-overleg, met de op dat moment gekozen regio/periode.
@@ -58,10 +60,16 @@ npm run dev      # http://localhost:3000
 
 ## Data verversen (maandelijks)
 
-1. Plaats de nieuwe Excel-export als `data/totaaloverzicht.xlsx`.
-2. Draai `npm run ingest`. Het script maakt de `traject`- en `plek`-tabellen
-   opnieuw aan en laadt de schone, gepseudonimiseerde data. Gebruikers en
-   budgetplafonds blijven behouden.
+**Via de app (aanbevolen):** log in → **Beheer → Data** → sleep het nieuwe
+Excel-totaaloverzicht in het uploadvak → "Upload & verwerk". De oude data wordt
+automatisch vervangen; je ziet meteen een datasamenvatting. Het bestand wordt
+niet op de server bewaard. Met "Data wissen" maak je de dataset handmatig leeg.
+
+**Via CLI (alternatief):** plaats het bestand als `data/totaaloverzicht.xlsx` en
+draai `npm run ingest`.
+
+Beide gebruiken dezelfde inleeslogica (`src/lib/ingest-core.ts`). Gebruikers,
+budgetplafonds, code-omschrijvingen en behandelaar-namen blijven behouden.
 
 ## Budgetplafonds invullen
 

@@ -10,7 +10,7 @@ import { filtersToQuery } from "@/lib/types";
  */
 export function useApi<T>(
   path: string,
-  extra?: Record<string, string | number | null | undefined>
+  extra?: Record<string, string | number | string[] | null | undefined>
 ) {
   const f = useFilters();
   const qs = filtersToQuery(f, extra);

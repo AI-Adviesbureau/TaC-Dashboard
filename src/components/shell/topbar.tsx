@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, ChevronDown, LogOut, X } from "lucide-react";
 import { useFilters } from "@/components/filters/filter-context";
 import { REGIO_OPTIES, MAAND_NAMEN_VOL } from "@/lib/types";
+import { GemeentePicker } from "@/components/filters/gemeente-picker";
 import { MODULES } from "@/lib/config/modules";
 import { cn } from "@/lib/cn";
 
@@ -27,6 +28,7 @@ export function Topbar({ naam }: { naam: string | null }) {
         </div>
 
         <RegioSwitch />
+        {pathname.startsWith("/overzicht") && <GemeentePicker />}
         <PeriodPicker />
         <UserMenu naam={naam} />
       </div>

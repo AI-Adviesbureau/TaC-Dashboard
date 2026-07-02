@@ -1,5 +1,6 @@
 import "server-only";
 import { sql } from "./db";
+import { addGemeenteFilter } from "./filter-sql";
 
 export interface Filters {
   regio?: string | null;
@@ -7,7 +8,7 @@ export interface Filters {
   maand?: number | null;
   van?: string | null; // custom periode (intake vanaf)
   tot?: string | null; // custom periode (intake t/m)
-  gemeente?: string | null;
+  gemeente?: string | string[] | null;
   code?: string | null;
   behandelaar?: string | null;
   rb?: string | null;
@@ -26,7 +27,7 @@ function buildWhere(f: Filters, alias = "t", extraConds: string[] = []) {
   if (f.maand) add((n) => `${alias}.maand_nr = $${n}`, f.maand);
   if (f.van) add((n) => `${alias}.intake >= $${n}`, f.van);
   if (f.tot) add((n) => `${alias}.intake <= $${n}`, f.tot);
-  if (f.gemeente) add((n) => `${alias}.gemeente = $${n}`, f.gemeente);
+  addGemeenteFilter(f.gemeente, alias, add);
   if (f.code) add((n) => `${alias}.code = $${n}`, f.code);
   if (f.behandelaar) add((n) => `${alias}.behandelaar_primair = $${n}`, f.behandelaar);
   if (f.rb) add((n) => `${alias}.rb = $${n}`, f.rb);
@@ -119,11 +120,16 @@ async function duurzameUitstroom(
   };
 }
 
-/** Budgetrealisatie: realisatie (omzet) versus aangeleverd plafond. */
+/** Budgetrealisatie: realisatie versus aangeleverd plafond. Plafonds zijn
+ *  per jaar; daarom alleen zinvol als er één jaar is geselecteerd. */
 async function budgetRealisatie(
   f: Filters
 ): Promise<{ realisatie: number; plafond: number | null; pct: number | null }> {
   const kc = await kerncijfers(f);
+  // Zonder gekozen jaar geen plafondvergelijking (anders all-time omzet vs één jaarplafond).
+  if (!f.jaar) {
+    return { realisatie: kc.gerealiseerd, plafond: null, pct: null };
+  }
   const params: unknown[] = [];
   const conds: string[] = [];
   if (f.jaar) {
@@ -338,13 +344,20 @@ export async function getPerBehandelaar(
 }
 
 /** Beschikbare filteropties (gemeenten, codes, behandelaren). */
-export async function getFilterOpties(): Promise<{
+export async function getFilterOpties(regio?: string | null): Promise<{
   gemeenten: string[];
   codes: string[];
   behandelaren: string[];
 }> {
-  const [g, c, b] = await Promise.all([
-    sql`SELECT DISTINCT gemeente FROM traject WHERE gemeente IS NOT NULL ORDER BY gemeente` as unknown as Promise<{ gemeente: string }[]>,
+  const g =
+    regio && regio !== "Totaal"
+      ? ((await sql`SELECT DISTINCT gemeente FROM traject WHERE gemeente IS NOT NULL AND regio = ${regio} ORDER BY gemeente`) as {
+          gemeente: string;
+        }[])
+      : ((await sql`SELECT DISTINCT gemeente FROM traject WHERE gemeente IS NOT NULL ORDER BY gemeente`) as {
+          gemeente: string;
+        }[]);
+  const [c, b] = await Promise.all([
     sql`SELECT DISTINCT code FROM traject WHERE code IS NOT NULL ORDER BY code` as unknown as Promise<{ code: string }[]>,
     sql`SELECT DISTINCT behandelaar_primair FROM traject WHERE behandelaar_primair IS NOT NULL ORDER BY behandelaar_primair` as unknown as Promise<{ behandelaar_primair: string }[]>,
   ]);

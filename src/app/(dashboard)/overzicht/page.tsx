@@ -5,6 +5,7 @@ import { Clock, Wallet, HeartHandshake, Target, Activity, FileDown } from "lucid
 import { useApi } from "@/lib/use-api";
 import { filtersToQuery } from "@/lib/types";
 import { useFilters } from "@/components/filters/filter-context";
+import { useOverviewFilters } from "@/components/filters/overview-filter-context";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton, EmptyState, ErrorState } from "@/components/ui/states";
@@ -31,10 +32,12 @@ type Breakdown = {
 export default function OverzichtPage() {
   const router = useRouter();
   const f = useFilters();
+  const { gemeenten } = useOverviewFilters();
   const { jaar, regio, van, tot } = f;
-  const ov = useApi<OverzichtData>("/api/overview");
-  const tr = useApi<TrendPunt[]>("/api/trend");
-  const bd = useApi<Breakdown>("/api/breakdown");
+  const extra = gemeenten.length ? { gemeente: gemeenten } : undefined;
+  const ov = useApi<OverzichtData>("/api/overview", extra);
+  const tr = useApi<TrendPunt[]>("/api/trend", extra);
+  const bd = useApi<Breakdown>("/api/breakdown", extra);
 
   const k = ov.data;
   const kort = (iso: string) =>
@@ -50,7 +53,15 @@ export default function OverzichtPage() {
     <div className="mx-auto max-w-[1400px] space-y-5">
       <div className="flex items-center justify-between gap-3 animate-in">
         <p className="text-sm text-[var(--muted)]">
-          {regio} · {periodeLabel}
+          {regio}
+          {gemeenten.length > 0 && (
+            <>
+              {" · "}
+              {gemeenten.length === 1 ? gemeenten[0] : `${gemeenten.length} gemeenten`}
+            </>
+          )}
+          {" · "}
+          {periodeLabel}
           {!jaar && !van && !tot && (
             <span className="ml-2 rounded-full bg-[var(--brand-yellow-50)] px-2 py-0.5 text-xs font-semibold text-[var(--warn)]">
               kies een jaar voor periodevergelijking
@@ -58,7 +69,12 @@ export default function OverzichtPage() {
           )}
         </p>
         <button
-          onClick={() => window.open(`/rapportage${filtersToQuery(f)}`, "_blank")}
+          onClick={() =>
+            window.open(
+              `/rapportage${filtersToQuery(f, extra)}`,
+              "_blank"
+            )
+          }
           className="flex shrink-0 items-center gap-2 rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm font-semibold shadow-sm transition hover:border-[var(--brand-green)]"
           title="Open een print-klare rapportage (opslaan als PDF)"
         >
