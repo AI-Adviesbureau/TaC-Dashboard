@@ -105,7 +105,7 @@ function PeriodPicker() {
         <div className="absolute right-0 mt-2 w-72 origin-top-right rounded-2xl border bg-[var(--surface)] p-3 shadow-[var(--shadow-hover)] animate-in">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">
-              Jaar
+              Lijst (Excel-tab)
             </span>
             {heeftPeriode && (
               <button
@@ -119,6 +119,9 @@ function PeriodPicker() {
               </button>
             )}
           </div>
+          <p className="mb-2 text-[10px] text-[var(--muted)]">
+            Kiest de Excel-lijst van dat jaar. KPI&apos;s tellen alleen trajecten op dat tabblad.
+          </p>
           <div className="grid grid-cols-4 gap-1.5">
             {JAREN.map((j) => (
               <button

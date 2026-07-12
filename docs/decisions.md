@@ -116,15 +116,14 @@ Impact op de getallen:
 exacte kopie; "1× per traject" is een redelijke benadering.)
 
 **Beslissing (doorgevoerd): optie 1 — ontdubbelen + beide tonen.**
-- Bron-of-waarheid is nu de SQL-view `traject_uniek`: één rij per uniek
-  `rel_nr` + `intake`. Beschikking (`omzet`) en `inkoop` worden 1× geteld
-  (max binnen de groep), `realisatie`/`overhead`/`betaald` worden gesommeerd,
-  `openstaand` = eindstatus (laatste jaar). Jaar = intakejaar (val terug op
-  bronjaar als intake ontbreekt).
-- Het dashboard toont nu **2.248 trajecten**, **beschikt budget €4,42M** én
-  **gerealiseerde omzet €6,15M** naast elkaar. Kosten/cliënt daalde van €1.141
-  (dubbel geteld) naar **€667** (inkoop ontdubbeld). Duurzame uitstroom 79,6%.
-- Alle KPI-, kosten-, behandelaar- en trajectenqueries draaien op `traject_uniek`.
+- Bron-of-waarheid is de SQL-view `traject_lijst`: één rij per traject **per
+  Excel-lijst** (`bron_jaar` = tabblad). Beschikking (`omzet`) en `inkoop`
+  worden 1× geteld per lijst, `realisatie`/`overhead`/`betaald` worden
+  gesommeerd binnen die lijst. De jaarkiezer filtert op **lijstjaar**
+  (`bron_jaar`), niet op intakejaar — elke jaarlijst wordt apart gedupliceerd.
+- Alle KPI-, kosten-, behandelaar- en trajectenqueries draaien op `traject_lijst`.
+- Legacy-view `traject_uniek` (ontdubbeld over alle jaren) blijft bestaan maar
+  wordt niet meer gebruikt in het dashboard.
 
 ### Verder opgelost in deze ronde
 - **Export kapte af op 500 rijen** (serverlimiet). Export pagineert nu en levert

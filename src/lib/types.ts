@@ -35,7 +35,7 @@ export const MAAND_NAMEN_VOL = [
 /** Eén (gededupliceerd) traject zoals de API het teruggeeft (client-veilig). */
 export interface TrajectRow {
   id: number;
-  jaar: number; // intakejaar (val terug op bronjaar)
+  jaar: number; // Excel-lijst (bron_jaar / tabblad)
   rel_nr: number | null;
   gemeente: string | null;
   regio: string;

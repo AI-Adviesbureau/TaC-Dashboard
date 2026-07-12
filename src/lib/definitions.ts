@@ -9,7 +9,7 @@ export const DEFINITIES = {
   budgetrealisatie:
     "Gerealiseerde omzet (som maanddeclaraties) afgezet tegen het afgesproken plafond. Bij een gemeente-filter telt alleen het plafond van die gemeente(n). Jaar is verplicht.",
   trajecten:
-    "Aantal trajecten in de selectie. Tussen haakjes het aantal lopende trajecten (zonder einddatum).",
+    "Aantal trajecten op de gekozen Excel-lijst (tabblad). Tussen haakjes het aantal lopende trajecten (zonder einddatum).",
   marge:
     "Omzet/budget minus inkoopkosten en 20% overhead, voor de huidige selectie.",
   aangevraagdBudget:
@@ -17,5 +17,7 @@ export const DEFINITIES = {
   gedeclareerdBudget:
     "Som van de maandkolommen (jan–dec) — werkelijk gedeclareerde bedragen per traject.",
   budgetPrognose:
-    "Verwacht totaalverbruik: bij afgesloten trajecten de gedeclareerde som; bij lopende trajecten extrapolatie op basis van het huidige maandtempo tot het einde van de beschikte periode (max. het aangevraagde budget).",
+    "Verwacht eindbedrag als lopende trajecten doorlopen tegen het huidige maandtempo. Afgesloten trajecten: gedeclareerd tot nu toe. Lopende: gedeclareerd + (resterende maanden × gemiddeld per maand), maximaal het aangevraagde budget per traject. Percentage = prognose ÷ aangevraagd; “nog” = aangevraagd − prognose (negatief = verwachte overschrijding).",
+  budgetResterend:
+    "Aangevraagd minus gedeclareerd op dit moment. Negatief betekent dat er al meer is gedeclareerd dan in K+L staat — kan komen doordat declaraties over meerdere jaren lopen terwijl K+L soms beperkt of leeg is.",
 } as const;

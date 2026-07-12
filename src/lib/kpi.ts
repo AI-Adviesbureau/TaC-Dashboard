@@ -1,7 +1,7 @@
 import "server-only";
 import { sql } from "./db";
 import { addGemeenteFilter } from "./filter-sql";
-import { ensureTrajectUniekView } from "./schema";
+import { ensureTrajectUniekView, TRAJECT_BRON } from "./schema";
 
 export interface Filters {
   regio?: string | null;
@@ -24,7 +24,8 @@ function buildWhere(f: Filters, alias = "t", extraConds: string[] = []) {
     parts.push(cond(params.length));
   };
   if (f.regio && f.regio !== "Totaal") add((n) => `${alias}.regio = $${n}`, f.regio);
-  if (f.jaar) add((n) => `${alias}.jaar = $${n}`, f.jaar);
+  // Jaar = Excel-lijst (tabblad bron_jaar), niet intakejaar.
+  if (f.jaar) add((n) => `${alias}.bron_jaar = $${n}`, f.jaar);
   if (f.maand) add((n) => `${alias}.maand_nr = $${n}`, f.maand);
   if (f.van) add((n) => `${alias}.intake >= $${n}`, f.van);
   if (f.tot) add((n) => `${alias}.intake <= $${n}`, f.tot);
@@ -66,7 +67,7 @@ async function kerncijfers(f: Filters): Promise<KerncijfersRow> {
       coalesce(sum(betaald_bedrag), 0) AS betaald,
       coalesce(sum(openstaand), 0) AS openstaand,
       count(*) FILTER (WHERE lopend)::int AS lopend
-    FROM traject_uniek t ${clause}`;
+    FROM ${TRAJECT_BRON} t ${clause}`;
   const rows = (await sql.query(text, params)) as KerncijfersRow[];
   const r = rows[0];
   return {
@@ -99,12 +100,12 @@ async function duurzameUitstroom(
   ]);
   const text = `
     WITH afgesloten AS (
-      SELECT t.rel_nr, t.eind FROM traject_uniek t ${clause}
+      SELECT t.rel_nr, t.eind FROM ${TRAJECT_BRON} t ${clause}
     )
     SELECT
       count(*)::int AS totaal,
       count(*) FILTER (WHERE NOT EXISTS (
-        SELECT 1 FROM traject_uniek n
+        SELECT 1 FROM traject n
         WHERE n.rel_nr = a.rel_nr
           AND n.intake IS NOT NULL
           AND n.intake > a.eind
@@ -175,6 +176,7 @@ export interface OverzichtData {
 }
 
 export async function getOverzicht(f: Filters): Promise<OverzichtData> {
+  await ensureTrajectUniekView();
   const [kc, uit, bud] = await Promise.all([
     kerncijfers(f),
     duurzameUitstroom(f),
@@ -205,15 +207,12 @@ export async function getTrend(
   f: Filters
 ): Promise<{ label: string; instroom: number; uitstroom: number; omzet: number }[]> {
   if (f.jaar) {
-    // Per maand binnen het gekozen jaar.
+    // Per maand binnen de gekozen Excel-lijst (bron_jaar).
     const { clause, params } = buildWhere({ ...f, maand: null });
-    const inText = `SELECT maand_nr AS m, count(*)::int AS n FROM traject_uniek t ${clause} ${clause ? "AND" : "WHERE"} maand_nr IS NOT NULL GROUP BY maand_nr`;
-    const omzetText = `SELECT maand_nr AS m, coalesce(sum(omzet),0) AS s FROM traject_uniek t ${clause} ${clause ? "AND" : "WHERE"} maand_nr IS NOT NULL GROUP BY maand_nr`;
-    // Uitstroom: tel afsluitingen per maand in dit jaar (los van instroomfilter maand).
-    const uitWhere = buildWhere({ regio: f.regio, gemeente: f.gemeente, code: f.code, behandelaar: f.behandelaar, rb: f.rb }, "t", [
-      `EXTRACT(YEAR FROM t.eind) = ${Number(f.jaar)}`,
-    ]);
-    const uitText = `SELECT EXTRACT(MONTH FROM t.eind)::int AS m, count(*)::int AS n FROM traject_uniek t ${uitWhere.clause} GROUP BY 1`;
+    const inText = `SELECT maand_nr AS m, count(*)::int AS n FROM ${TRAJECT_BRON} t ${clause} ${clause ? "AND" : "WHERE"} maand_nr IS NOT NULL GROUP BY maand_nr`;
+    const omzetText = `SELECT maand_nr AS m, coalesce(sum(omzet),0) AS s FROM ${TRAJECT_BRON} t ${clause} ${clause ? "AND" : "WHERE"} maand_nr IS NOT NULL GROUP BY maand_nr`;
+    const uitWhere = buildWhere({ ...f, maand: null }, "t", ["t.eind IS NOT NULL"]);
+    const uitText = `SELECT EXTRACT(MONTH FROM t.eind)::int AS m, count(*)::int AS n FROM ${TRAJECT_BRON} t ${uitWhere.clause} GROUP BY 1`;
     const [inRows, uitRows, omzetRows] = await Promise.all([
       sql.query(inText, params) as unknown as Promise<{ m: number; n: number }[]>,
       sql.query(uitText, uitWhere.params) as unknown as Promise<{ m: number; n: number }[]>,
@@ -228,13 +227,13 @@ export async function getTrend(
     }));
   }
 
-  // Per jaar (alle perioden): instroom op intakejaar, uitstroom op einddatumjaar.
+  // Per Excel-lijst (bron_jaar): instroom = rijen in lijst, uitstroom = afgesloten in lijst.
   const inWhere = buildWhere({ ...f, jaar: null });
-  const inText = `SELECT jaar AS j, count(*)::int AS n, coalesce(sum(omzet),0) AS omzet
-    FROM traject_uniek t ${inWhere.clause} GROUP BY jaar`;
+  const inText = `SELECT bron_jaar AS j, count(*)::int AS n, coalesce(sum(omzet),0) AS omzet
+    FROM ${TRAJECT_BRON} t ${inWhere.clause} GROUP BY bron_jaar`;
   const uitW = buildWhere({ ...f, jaar: null }, "t", ["t.eind IS NOT NULL"]);
-  const uitText = `SELECT EXTRACT(YEAR FROM t.eind)::int AS j, count(*)::int AS n
-    FROM traject_uniek t ${uitW.clause} GROUP BY 1`;
+  const uitText = `SELECT bron_jaar AS j, count(*)::int AS n
+    FROM ${TRAJECT_BRON} t ${uitW.clause} GROUP BY bron_jaar`;
   const [inRows, uitRows] = await Promise.all([
     sql.query(inText, inWhere.params) as unknown as Promise<{ j: number; n: number; omzet: number }[]>,
     sql.query(uitText, uitW.params) as unknown as Promise<{ j: number; n: number }[]>,
@@ -262,7 +261,7 @@ export async function getPerGemeente(
       count(*)::int AS aantal,
       coalesce(sum(omzet),0) AS omzet,
       avg(doorlooptijd) FILTER (WHERE doorlooptijd IS NOT NULL AND NOT lopend) AS gem_dlt
-    FROM traject_uniek t ${clause}
+    FROM ${TRAJECT_BRON} t ${clause}
     GROUP BY gemeente ORDER BY aantal DESC`;
   const rows = (await sql.query(text, params)) as Record<string, unknown>[];
   return rows.map((r) => ({
@@ -317,7 +316,7 @@ export async function getGemeentePrognose(f: Filters): Promise<GemeentePrognoseR
           )
         END
       ), 0) AS prognose
-    FROM traject_uniek t ${clause}
+    FROM ${TRAJECT_BRON} t ${clause}
     GROUP BY gemeente
     ORDER BY aangevraagd DESC, gemeente`;
   const rows = (await sql.query(text, params)) as Record<string, unknown>[];
@@ -346,7 +345,7 @@ export async function getPerCode(
   params.push(limit);
   const text = `
     SELECT code, count(*)::int AS aantal, coalesce(sum(omzet),0) AS omzet
-    FROM traject_uniek t ${clause}
+    FROM ${TRAJECT_BRON} t ${clause}
     GROUP BY code ORDER BY aantal DESC LIMIT $${params.length}`;
   const rows = (await sql.query(text, params)) as Record<string, unknown>[];
   return rows.map((r) => ({ code: String(r.code), aantal: Number(r.aantal), omzet: Number(r.omzet) }));
@@ -362,7 +361,7 @@ export async function getDoorlooptijdVerdeling(
   ]);
   const text = `
     SELECT width_bucket(doorlooptijd, 0, 24, 12) AS b, count(*)::int AS aantal
-    FROM traject_uniek t ${clause}
+    FROM ${TRAJECT_BRON} t ${clause}
     GROUP BY b ORDER BY b`;
   const rows = (await sql.query(text, params)) as { b: number; aantal: number }[];
   const labels: Record<number, string> = {};
@@ -399,7 +398,7 @@ export async function getPerBehandelaar(
       avg(doorlooptijd) FILTER (WHERE doorlooptijd IS NOT NULL AND NOT lopend) AS gem_dlt,
       coalesce(sum(inkoop),0) AS inkoop,
       coalesce(sum(omzet),0) AS omzet
-    FROM traject_uniek t ${clause}
+    FROM ${TRAJECT_BRON} t ${clause}
     GROUP BY ${kolom} ORDER BY aantal DESC`;
   const rows = (await sql.query(text, params)) as Record<string, unknown>[];
   return rows.map((r) => ({
@@ -413,22 +412,45 @@ export async function getPerBehandelaar(
 }
 
 /** Beschikbare filteropties (gemeenten, codes, behandelaren). */
-export async function getFilterOpties(regio?: string | null): Promise<{
+export async function getFilterOpties(
+  regio?: string | null,
+  jaar?: number | null
+): Promise<{
   gemeenten: string[];
   codes: string[];
   behandelaren: string[];
 }> {
   const g =
-    regio && regio !== "Totaal"
-      ? ((await sql`SELECT DISTINCT gemeente FROM traject WHERE gemeente IS NOT NULL AND regio = ${regio} ORDER BY gemeente`) as {
-          gemeente: string;
-        }[])
-      : ((await sql`SELECT DISTINCT gemeente FROM traject WHERE gemeente IS NOT NULL ORDER BY gemeente`) as {
-          gemeente: string;
-        }[]);
+    jaar != null
+      ? regio && regio !== "Totaal"
+        ? ((await sql`
+            SELECT DISTINCT gemeente FROM traject
+            WHERE gemeente IS NOT NULL AND bron_jaar = ${jaar} AND regio = ${regio}
+            ORDER BY gemeente
+          `) as { gemeente: string }[])
+        : ((await sql`
+            SELECT DISTINCT gemeente FROM traject
+            WHERE gemeente IS NOT NULL AND bron_jaar = ${jaar}
+            ORDER BY gemeente
+          `) as { gemeente: string }[])
+      : regio && regio !== "Totaal"
+        ? ((await sql`SELECT DISTINCT gemeente FROM traject WHERE gemeente IS NOT NULL AND regio = ${regio} ORDER BY gemeente`) as {
+            gemeente: string;
+          }[])
+        : ((await sql`SELECT DISTINCT gemeente FROM traject WHERE gemeente IS NOT NULL ORDER BY gemeente`) as {
+            gemeente: string;
+          }[]);
+  const codeQuery =
+    jaar != null
+      ? sql`SELECT DISTINCT code FROM traject WHERE code IS NOT NULL AND bron_jaar = ${jaar} ORDER BY code`
+      : sql`SELECT DISTINCT code FROM traject WHERE code IS NOT NULL ORDER BY code`;
+  const behQuery =
+    jaar != null
+      ? sql`SELECT DISTINCT behandelaar_primair FROM traject WHERE behandelaar_primair IS NOT NULL AND bron_jaar = ${jaar} ORDER BY behandelaar_primair`
+      : sql`SELECT DISTINCT behandelaar_primair FROM traject WHERE behandelaar_primair IS NOT NULL ORDER BY behandelaar_primair`;
   const [c, b] = await Promise.all([
-    sql`SELECT DISTINCT code FROM traject WHERE code IS NOT NULL ORDER BY code` as unknown as Promise<{ code: string }[]>,
-    sql`SELECT DISTINCT behandelaar_primair FROM traject WHERE behandelaar_primair IS NOT NULL ORDER BY behandelaar_primair` as unknown as Promise<{ behandelaar_primair: string }[]>,
+    codeQuery as unknown as Promise<{ code: string }[]>,
+    behQuery as unknown as Promise<{ behandelaar_primair: string }[]>,
   ]);
   return {
     gemeenten: g.map((r) => r.gemeente),

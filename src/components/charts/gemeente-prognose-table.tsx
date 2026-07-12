@@ -39,18 +39,22 @@ export function GemeentePrognoseTable({ rows }: { rows: GemeentePrognoseRow[] })
             <th className="px-3 py-2 text-right">Trajecten</th>
             <th className="px-3 py-2 text-right">
               <span className="inline-flex items-center justify-end gap-1">
-                Aangevraagd <InfoTip text={DEFINITIES.aangevraagdBudget} />
+                Aangevraagd <InfoTip align="right" text={DEFINITIES.aangevraagdBudget} />
               </span>
             </th>
             <th className="px-3 py-2 text-right">
               <span className="inline-flex items-center justify-end gap-1">
-                Gedeclareerd <InfoTip text={DEFINITIES.gedeclareerdBudget} />
+                Gedeclareerd <InfoTip align="right" text={DEFINITIES.gedeclareerdBudget} />
               </span>
             </th>
-            <th className="px-3 py-2 text-right">Resterend</th>
             <th className="px-3 py-2 text-right">
               <span className="inline-flex items-center justify-end gap-1">
-                Prognose <InfoTip text={DEFINITIES.budgetPrognose} />
+                Resterend <InfoTip align="right" text={DEFINITIES.budgetResterend} />
+              </span>
+            </th>
+            <th className="px-3 py-2 text-right">
+              <span className="inline-flex items-center justify-end gap-1">
+                Prognose <InfoTip align="right" text={DEFINITIES.budgetPrognose} />
               </span>
             </th>
           </tr>
@@ -92,6 +96,12 @@ export function GemeentePrognoseTable({ rows }: { rows: GemeentePrognoseRow[] })
           </tfoot>
         )}
       </table>
+      <p className="mx-3 mt-3 border-t pt-3 text-xs leading-relaxed text-[var(--muted)]">
+        <strong className="text-[var(--text)]">Resterend</strong> = aangevraagd − gedeclareerd.{" "}
+        <strong className="text-[var(--text)]">Prognose</strong> = verwacht eindtotaal; het
+        percentage daaronder is prognose ÷ aangevraagd. &quot;Nog …&quot; is wat er op papier over
+        blijft na die prognose (negatief = overschrijding verwacht).
+      </p>
     </div>
   );
 }
@@ -180,7 +190,7 @@ function PrognoseWaarde({
       <div className="font-semibold">{fmtEuro(prognose)}</div>
       {aangevraagd > 0 && (
         <div className="text-xs text-[var(--muted)]">
-          {fmtProcent(pct ?? 0, 0)} · nog {fmtEuro(resterend)}
+          {fmtProcent(pct ?? 0, 0)} van aangevraagd · nog {fmtEuro(resterend)}
         </div>
       )}
     </div>

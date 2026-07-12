@@ -2,6 +2,7 @@ import "server-only";
 import { sql } from "./db";
 import type { Filters } from "./kpi";
 import { addGemeenteFilter } from "./filter-sql";
+import { ensureTrajectUniekView, TRAJECT_BRON } from "./schema";
 import type { TrajectRow } from "./types";
 
 export type { TrajectRow };
@@ -30,7 +31,7 @@ function buildWhere(f: TrajectFilters, search?: string) {
     parts.push(cond(params.length));
   };
   if (f.regio && f.regio !== "Totaal") add((n) => `t.regio = $${n}`, f.regio);
-  if (f.jaar) add((n) => `t.jaar = $${n}`, f.jaar);
+  if (f.jaar) add((n) => `t.bron_jaar = $${n}`, f.jaar);
   if (f.maand) add((n) => `t.maand_nr = $${n}`, f.maand);
   if (f.van) add((n) => `t.intake >= $${n}`, f.van);
   if (f.tot) add((n) => `t.intake <= $${n}`, f.tot);
@@ -69,20 +70,21 @@ export async function getTrajecten(
   f: TrajectFilters,
   opts: { search?: string; sort?: string; dir?: string; limit?: number; offset?: number } = {}
 ): Promise<{ rows: TrajectRow[]; total: number }> {
+  await ensureTrajectUniekView();
   const { clause, params } = buildWhere(f, opts.search);
   const sortCol = SORT_KOLOMMEN[opts.sort ?? "intake"] ?? "intake";
   const dir = opts.dir === "asc" ? "ASC" : "DESC";
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 500);
   const offset = Math.max(opts.offset ?? 0, 0);
 
-  const countText = `SELECT count(*)::int AS n FROM traject_uniek t ${clause}`;
+  const countText = `SELECT count(*)::int AS n FROM ${TRAJECT_BRON} t ${clause}`;
   const countRows = (await sql.query(countText, params)) as { n: number }[];
   const total = Number(countRows[0].n);
 
   const dataParams = [...params, limit, offset];
   const dataText = `
     SELECT ${SELECT_COLS}
-    FROM traject_uniek t ${JOINS} ${clause}
+    FROM ${TRAJECT_BRON} t ${JOINS} ${clause}
     ORDER BY t.${sortCol} ${dir} NULLS LAST, t.id DESC
     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
   const rows = (await sql.query(dataText, dataParams)) as Record<string, unknown>[];
@@ -90,8 +92,9 @@ export async function getTrajecten(
 }
 
 export async function getTrajectDetail(id: number): Promise<TrajectRow | null> {
+  await ensureTrajectUniekView();
   const rows = (await sql.query(
-    `SELECT ${SELECT_COLS} FROM traject_uniek t ${JOINS} WHERE t.id = $1`,
+    `SELECT ${SELECT_COLS} FROM ${TRAJECT_BRON} t ${JOINS} WHERE t.id = $1`,
     [id]
   )) as Record<string, unknown>[];
   return rows[0] ? mapRow(rows[0]) : null;
@@ -126,6 +129,7 @@ function mapRow(r: Record<string, unknown>): TrajectRow {
 
 /** Kosten & budget: per gemeente kosten/omzet/marge + plekkenbezetting per maand. */
 export async function getKosten(f: Filters) {
+  await ensureTrajectUniekView();
   const { clause, params } = buildWhere(f);
   const perGemeenteText = `
     SELECT t.gemeente, t.regio,
@@ -137,7 +141,7 @@ export async function getKosten(f: Filters) {
       coalesce(sum(t.overhead),0) AS overhead,
       coalesce(sum(t.realisatie - t.inkoop - t.overhead),0) AS marge,
       coalesce(sum(t.openstaand),0) AS openstaand
-    FROM traject_uniek t ${clause ? clause + " AND" : "WHERE"} t.gemeente IS NOT NULL
+    FROM ${TRAJECT_BRON} t ${clause ? clause + " AND" : "WHERE"} t.gemeente IS NOT NULL
     GROUP BY t.gemeente, t.regio ORDER BY omzet DESC`;
   const perGemeente = (await sql.query(perGemeenteText, params)) as Record<string, unknown>[];
 
