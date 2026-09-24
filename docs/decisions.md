@@ -180,6 +180,22 @@ totaal) liggen op het niveau *incl. speling*. Daarom is er een schakelaar
   opgeteld; met een gemeentefilter telt alleen de gemeente-rij.
 ▸ Vraag aan Anniek: basisbudget per gemeente (excl. speling) aanleveren.
 
+### Zorgvorm-indeling (zoals de gemeente)
+Afgeleid uit de reconciliatie per productcode (tabel `code_zorgvorm`, per code
+aanpasbaar in Beheer → Productcodes; `src/lib/zorgvorm.ts`):
+
+| Zorgvorm | Codes | Bewijs |
+| --- | --- | --- |
+| Ambulante hulp | 45xxx | 2026 t/m jul: 129 cl. / € 301.885 vs gemeente 128 / € 300.520 |
+| Brede Analyse | 50L02, 50R02, **54R03** | 2025: 2 / € 5.922 **exact**; 2026: 14 / € 33.846 vs € 33.847 |
+| GGZ | overige 54xxx | 2026: 21 / € 49.405 vs gemeente 16 / € 40.596 (wij actueler) |
+| Overig | P5xxx (oude regiocodes t/m 2023), codes zonder prefix | niet in 2025/2026 Noord |
+
+De Jeugdmonitor toont "Kosten per cliënt per zorgvorm" (vorig jaar vs. dit
+jaar), net als de gemeente. Een cliënt met trajecten in meerdere zorgvormen telt
+per zorgvorm mee; het totaal telt unieke cliënten (identiek aan de gemeente).
+Ingest normaliseert codes nu naar hoofdletters en weigert datums in de codekolom.
+
 ### Doorgevoerd
 - View `traject_lijst` heeft nu `r1..r12` (gedeclareerd per maand); migratie
   automatisch (`ensureTrajectUniekView` checkt kolom `r12`), en `createSchema`

@@ -147,8 +147,14 @@ function parseSheet(year: number, rows: Row[], issues: Issues): TrajectRecord[] 
     const iCode = col(map, "code");
     let code: string | null = null;
     if (iCode !== null && row[iCode] !== null && row[iCode] !== undefined) {
-      const c = String(row[iCode]).trim();
-      code = c && c !== "0" ? c : null;
+      if (row[iCode] instanceof Date) {
+        // Een datum in de code-kolom is een invoerfout, geen productcode.
+        bump("code_is_datum_genegeerd");
+      } else {
+        // Codes genormaliseerd naar hoofdletters (p5022 en P5022 zijn dezelfde code).
+        const c = String(row[iCode]).trim().toUpperCase();
+        code = c && c !== "0" ? c : null;
+      }
     }
     if (!code) bump("code_ontbreekt");
 
@@ -317,6 +323,7 @@ export async function createSchema() {
       plafond_bedrag NUMERIC, basis_bedrag NUMERIC, plekken INT)`;
   await sql`ALTER TABLE budget_plafond ADD COLUMN IF NOT EXISTS basis_bedrag NUMERIC`;
   await sql`CREATE TABLE IF NOT EXISTS code_omschrijving (code TEXT PRIMARY KEY, omschrijving TEXT)`;
+  await sql`CREATE TABLE IF NOT EXISTS code_zorgvorm (code TEXT PRIMARY KEY, zorgvorm TEXT NOT NULL)`;
   await sql`CREATE TABLE IF NOT EXISTS behandelaar_naam (initialen TEXT PRIMARY KEY, naam TEXT)`;
   await sql`DROP TABLE IF EXISTS code_norm`;
   await sql`CREATE TABLE code_norm (code TEXT PRIMARY KEY, norm_maanden NUMERIC)`;

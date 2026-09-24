@@ -4,6 +4,7 @@ import type { Filters } from "./kpi";
 import { addGemeenteFilter, realisatieTmExpr } from "./filter-sql";
 import { ensureTrajectUniekView, TRAJECT_BRON } from "./schema";
 import { plafondTotaal, plafondPerGemeente } from "./budget";
+import { ensureZorgvormTabel, ZORGVORM_JOIN, ZORGVORM_SQL } from "./zorgvorm";
 
 /**
  * Jeugdmonitor: cijfers volgens de definities van het gemeentedashboard
@@ -54,6 +55,19 @@ export interface MonitorMaand {
   toegewezenVorig: number | null;
 }
 
+export interface ZorgvormCijfers {
+  actieveClienten: number;
+  gedeclareerd: number;
+  kostenPerClient: number | null;
+}
+
+export interface MonitorZorgvormRow {
+  zorgvorm: string;
+  huidig: ZorgvormCijfers;
+  vorig: ZorgvormCijfers;
+  groeiKostenPerClient: number | null;
+}
+
 export interface MonitorData {
   jaar: number;
   vorigJaar: number;
@@ -63,6 +77,7 @@ export interface MonitorData {
   vorig: MonitorKern;
   groei: { realisatie: number | null; actieveClienten: number | null; kostenPerClient: number | null };
   perGemeente: MonitorGemeenteRow[];
+  perZorgvorm: MonitorZorgvormRow[];
   maanden: MonitorMaand[];
 }
 
@@ -155,6 +170,37 @@ async function perGemeente(f: Filters, jaar: number, tm: number): Promise<Monito
     });
 }
 
+/** Per zorgvorm (gemeente-indeling) voor twee jaarlijsten: actieve cliënten, gedeclareerd, KpC. */
+async function perZorgvorm(f: Filters, jaar: number, vorigJaar: number, tm: number): Promise<MonitorZorgvormRow[]> {
+  await ensureZorgvormTabel();
+  const R = realisatieTmExpr(tm);
+  const { clause, params } = whereBasis(f, [jaar, vorigJaar]);
+  const rows = (await sql.query(
+    `SELECT t.bron_jaar, ${ZORGVORM_SQL} AS zorgvorm,
+            count(distinct t.rel_nr) FILTER (WHERE ${R} > 0)::int AS actieve,
+            coalesce(sum(${R}),0) AS gedeclareerd
+     FROM ${TRAJECT_BRON} t ${ZORGVORM_JOIN} ${clause}
+     GROUP BY t.bron_jaar, 2`,
+    params
+  )) as { bron_jaar: number; zorgvorm: string; actieve: number; gedeclareerd: number }[];
+  const leeg = (): ZorgvormCijfers => ({ actieveClienten: 0, gedeclareerd: 0, kostenPerClient: null });
+  const map = new Map<string, MonitorZorgvormRow>();
+  for (const r of rows) {
+    const ged = Number(r.gedeclareerd);
+    const act = Number(r.actieve);
+    if (ged <= 0 && act <= 0) continue;
+    const c: ZorgvormCijfers = { actieveClienten: act, gedeclareerd: ged, kostenPerClient: act > 0 ? Math.round(ged / act) : null };
+    const row = map.get(r.zorgvorm) ?? { zorgvorm: r.zorgvorm, huidig: leeg(), vorig: leeg(), groeiKostenPerClient: null };
+    if (Number(r.bron_jaar) === jaar) row.huidig = c;
+    else row.vorig = c;
+    map.set(r.zorgvorm, row);
+  }
+  const volgorde = ["Ambulante hulp", "Brede Analyse", "GGZ", "Overig"];
+  return [...map.values()]
+    .map((r) => ({ ...r, groeiKostenPerClient: pct(r.huidig.kostenPerClient, r.vorig.kostenPerClient) }))
+    .sort((a, b) => volgorde.indexOf(a.zorgvorm) - volgorde.indexOf(b.zorgvorm));
+}
+
 interface MaandRij {
   bron_jaar: number;
   m: number[];
@@ -202,11 +248,12 @@ export async function getMonitor(f: Filters): Promise<MonitorData> {
   const tm = f.maand ?? (jaar === nu.getFullYear() ? Math.max(1, Math.min(12, nu.getMonth())) : 12);
   const vorigJaar = jaar - 1;
 
-  const [huidig, vorig, gemeenten, maandRijen] = await Promise.all([
+  const [huidig, vorig, gemeenten, maandRijen, zorgvormen] = await Promise.all([
     kern(f, jaar, tm),
     kern(f, vorigJaar, tm),
     perGemeente(f, jaar, tm),
     perMaand(f, [jaar, vorigJaar]),
+    perZorgvorm(f, jaar, vorigJaar, tm),
   ]);
 
   const dit = maandRijen.find((r) => r.bron_jaar === jaar);
@@ -245,6 +292,7 @@ export async function getMonitor(f: Filters): Promise<MonitorData> {
       kostenPerClient: pct(huidig.kostenPerClient, vorig.kostenPerClient),
     },
     perGemeente: gemeenten,
+    perZorgvorm: zorgvormen,
     maanden,
   };
 }

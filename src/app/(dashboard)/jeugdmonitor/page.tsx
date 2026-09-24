@@ -143,6 +143,78 @@ export default function JeugdmonitorPage() {
         </div>
       </Card>
 
+      {/* Per zorgvorm — zoals "Kosten per cliënt overzicht" bij de gemeente */}
+      <Card className="animate-in">
+        <CardHeader
+          title="Kosten per cliënt per zorgvorm"
+          subtitle={d ? `${d.vorigJaar} en ${d.jaar}, beide t/m ${tmLabel}` : undefined}
+          action={<InfoTip align="right" text={DEFINITIES.zorgvorm} />}
+        />
+        <div className="mt-3 overflow-x-auto">
+          {loading ? (
+            <div className="space-y-2 p-5">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
+          ) : d && d.perZorgvorm.length ? (
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="border-b text-xs font-bold uppercase tracking-wide text-[var(--muted)]">
+                  <th className="px-4 py-1.5 text-left" rowSpan={2}>Zorgvorm</th>
+                  <th className="border-l px-4 py-1.5 text-center" colSpan={3}>{d.vorigJaar}</th>
+                  <th className="border-l px-4 py-1.5 text-center" colSpan={3}>{d.jaar}</th>
+                  <th className="border-l px-4 py-1.5 text-right" rowSpan={2}>KpC-groei</th>
+                </tr>
+                <tr className="border-b text-[11px] font-semibold text-[var(--muted)]">
+                  <th className="border-l px-4 py-1 text-right">Actieve cl.</th>
+                  <th className="px-4 py-1 text-right">Gedeclareerd</th>
+                  <th className="px-4 py-1 text-right">Kosten/cl.</th>
+                  <th className="border-l px-4 py-1 text-right">Actieve cl.</th>
+                  <th className="px-4 py-1 text-right">Gedeclareerd</th>
+                  <th className="px-4 py-1 text-right">Kosten/cl.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.perZorgvorm.map((z) => {
+                  const g = z.groeiKostenPerClient;
+                  return (
+                    <tr key={z.zorgvorm} className="border-b border-[var(--border)]/60 transition hover:bg-[var(--surface-2)]/60">
+                      <td className="px-4 py-2.5 font-semibold">{z.zorgvorm}</td>
+                      <td className="border-l px-4 py-2.5 text-right tabular-nums text-[var(--muted)]">{fmtGetal(z.vorig.actieveClienten)}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-[var(--muted)]">{fmtEuro(z.vorig.gedeclareerd)}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-[var(--muted)]">{fmtEuro(z.vorig.kostenPerClient)}</td>
+                      <td className="border-l px-4 py-2.5 text-right tabular-nums">{fmtGetal(z.huidig.actieveClienten)}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums">{fmtEuro(z.huidig.gedeclareerd)}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-semibold">{fmtEuro(z.huidig.kostenPerClient)}</td>
+                      <td className={cn("border-l px-4 py-2.5 text-right tabular-nums font-bold", g == null ? "text-[var(--muted)]" : g <= 0 ? "text-[var(--ok)]" : "text-[var(--bad)]")}>
+                        {g == null ? "—" : `${g > 0 ? "+" : ""}${fmtProcent(g, 1)}`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t bg-[var(--surface-2)]/60 font-bold">
+                  <td className="px-4 py-2.5">Totaal</td>
+                  <td className="border-l px-4 py-2.5 text-right tabular-nums">{fmtGetal(d.vorig.actieveClienten)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{fmtEuro(d.vorig.realisatie)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{fmtEuro(d.vorig.kostenPerClient)}</td>
+                  <td className="border-l px-4 py-2.5 text-right tabular-nums">{fmtGetal(d.huidig.actieveClienten)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{fmtEuro(d.huidig.realisatie)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{fmtEuro(d.huidig.kostenPerClient)}</td>
+                  <td className="border-l px-4 py-2.5 text-right tabular-nums">
+                    {d.groei.kostenPerClient == null ? "—" : `${d.groei.kostenPerClient > 0 ? "+" : ""}${fmtProcent(d.groei.kostenPerClient, 1)}`}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          ) : (
+            <EmptyState />
+          )}
+        </div>
+        <p className="mx-4 mb-4 mt-3 text-xs text-[var(--muted)]">
+          Een cliënt met trajecten in meerdere zorgvormen telt in elke zorgvorm mee (zo doet de gemeente het ook);
+          het totaal telt unieke cliënten.
+        </p>
+      </Card>
+
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-5">
         {/* Per gemeente */}
         <Card className="animate-in xl:col-span-3">

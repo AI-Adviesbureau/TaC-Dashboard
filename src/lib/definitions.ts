@@ -16,6 +16,8 @@ export const DEFINITIES = {
     "Twee manieren om het budgetverbruik te berekenen — zelfde realisatie, andere noemer.\n\n• Toegekend incl. speling: het budget zoals het aan Talenti a Casa is toegekend inclusief de toegestane afwijking (bijv. 2026 Noord-Limburg: € 793.000 in totaal, per gemeente ingevuld in Beheer).\n\n• Basisbudget (gemeente): het budget zónder speling, waartegen het gemeentedashboard (Jeugdmonitor) het verbruik afzet (2026 Noord-Limburg: € 483.960; de speling van € 300.000 komt daar bovenop). Kies deze basis om het percentage van de gemeente te herkennen.\n\nHet basisbudget per gemeente vul je in bij Beheer → Budgetplafonds; ontbreekt het, dan wordt een totaalrij voor de regio gebruikt.",
   monitorPrognose:
     "Verwachte realisatie aan het eind van het jaar: gedeclareerd t/m de gekozen maand plus het gemiddelde maandbedrag (over de verstreken maanden) maal de resterende maanden. Zelfde lineaire benadering als de gemeente.",
+  zorgvorm:
+    "Indeling van productcodes in zorgvormen zoals het gemeentedashboard: Ambulante hulp (45xxx), Brede Analyse (50xxx en 54R03) en GGZ (overige 54xxx). Afgeleid uit de reconciliatie met de gemeentecijfers; per code aan te passen in Beheer → Productcodes.",
   toegewezenClienten:
     "Unieke cliënten met een lopend traject in die maand (intake vóór het einde van de maand en nog geen einddatum, of einddatum in/na die maand).",
   duurzameUitstroom:

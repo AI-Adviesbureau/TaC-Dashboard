@@ -1,6 +1,7 @@
 import "server-only";
 import { sql } from "./db";
 import { ensureBudgetKolom } from "./budget";
+import { ensureZorgvormTabel, zorgvormStandaard, ZORGVORMEN, type Zorgvorm } from "./zorgvorm";
 
 /* ---------- Budgetplafonds ---------- */
 
@@ -51,19 +52,26 @@ export interface CodeRow {
   aantal: number;
   omschrijving: string | null;
   norm_maanden: number | null;
+  /** Expliciet toegewezen zorgvorm (code_zorgvorm), anders null. */
+  zorgvorm: string | null;
+  /** Zorgvorm volgens de standaardregel (gebruikt als er geen expliciete is). */
+  zorgvormStandaard: Zorgvorm;
 }
 
 export async function listCodes(): Promise<CodeRow[]> {
+  await ensureZorgvormTabel();
   const rows = (await sql`
     SELECT t.code,
       count(*)::int AS aantal,
       co.omschrijving,
-      cn.norm_maanden
+      cn.norm_maanden,
+      cz.zorgvorm
     FROM traject t
     LEFT JOIN code_omschrijving co ON co.code = t.code
     LEFT JOIN code_norm cn ON cn.code = t.code
+    LEFT JOIN code_zorgvorm cz ON cz.code = t.code
     WHERE t.code IS NOT NULL
-    GROUP BY t.code, co.omschrijving, cn.norm_maanden
+    GROUP BY t.code, co.omschrijving, cn.norm_maanden, cz.zorgvorm
     ORDER BY aantal DESC
   `) as Record<string, unknown>[];
   return rows.map((r) => ({
@@ -71,7 +79,21 @@ export async function listCodes(): Promise<CodeRow[]> {
     aantal: Number(r.aantal),
     omschrijving: (r.omschrijving as string) ?? null,
     norm_maanden: r.norm_maanden === null ? null : Number(r.norm_maanden),
+    zorgvorm: (r.zorgvorm as string) ?? null,
+    zorgvormStandaard: zorgvormStandaard(String(r.code)),
   }));
+}
+
+export async function upsertZorgvorm(code: string, zorgvorm: string | null): Promise<void> {
+  await ensureZorgvormTabel();
+  if (zorgvorm && (ZORGVORMEN as readonly string[]).includes(zorgvorm)) {
+    await sql`
+      INSERT INTO code_zorgvorm (code, zorgvorm) VALUES (${code}, ${zorgvorm})
+      ON CONFLICT (code) DO UPDATE SET zorgvorm = EXCLUDED.zorgvorm`;
+  } else {
+    // Leeg = terug naar de standaardregel.
+    await sql`DELETE FROM code_zorgvorm WHERE code = ${code}`;
+  }
 }
 
 export async function upsertCode(code: string, omschrijving: string | null): Promise<void> {

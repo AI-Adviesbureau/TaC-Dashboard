@@ -5,13 +5,20 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/states";
 import { SaveInput } from "./save-input";
+import { Select } from "@/components/ui/select";
+import { InfoTip } from "@/components/ui/info-tip";
+import { DEFINITIES } from "@/lib/definitions";
 import { fmtGetal, fmtMaanden } from "@/lib/format";
+
+const ZORGVORMEN = ["Ambulante hulp", "Brede Analyse", "GGZ", "Overig"];
 
 interface CodeRow {
   code: string;
   aantal: number;
   omschrijving: string | null;
   norm_maanden: number | null;
+  zorgvorm: string | null;
+  zorgvormStandaard: string;
 }
 
 export function CodesTab() {
@@ -34,11 +41,21 @@ export function CodesTab() {
     });
   }
 
+  async function saveZorgvorm(code: string, zorgvorm: string) {
+    setRows((prev) => prev?.map((r) => (r.code === code ? { ...r, zorgvorm: zorgvorm || null } : r)) ?? prev);
+    await fetch("/api/beheer/codes", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, zorgvorm: zorgvorm || null }),
+    });
+  }
+
   return (
     <Card className="overflow-hidden">
       <CardHeader
         title="Productcodes"
-        subtitle="Geef elke code een leesbare omschrijving. Die verschijnt overal in het dashboard. Norm = standaard doorlooptijd (uit tabblad Venlo)."
+        subtitle="Omschrijving en zorgvorm per code. De zorgvorm bepaalt de indeling op de Jeugdmonitor (zoals de gemeente). Norm = standaard doorlooptijd (uit tabblad Venlo)."
+        action={<InfoTip align="right" text={DEFINITIES.zorgvorm} />}
       />
       <div className="mt-3 overflow-x-auto">
         {rows === null ? (
@@ -52,6 +69,7 @@ export function CodesTab() {
                 <th className="px-5 py-2.5 font-bold">Code</th>
                 <th className="px-5 py-2.5 text-right font-bold">Trajecten</th>
                 <th className="px-5 py-2.5 text-right font-bold">Norm</th>
+                <th className="px-5 py-2.5 font-bold">Zorgvorm</th>
                 <th className="px-5 py-2.5 font-bold">Omschrijving</th>
               </tr>
             </thead>
@@ -63,7 +81,15 @@ export function CodesTab() {
                   <td className="px-5 py-2 text-right tabular-nums text-[var(--muted)]">
                     {r.norm_maanden != null ? fmtMaanden(r.norm_maanden) : "—"}
                   </td>
-                  <td className="px-5 py-2 w-[45%]">
+                  <td className="px-5 py-2 w-[190px]">
+                    <Select
+                      value={r.zorgvorm ?? ""}
+                      onChange={(v) => saveZorgvorm(r.code, v)}
+                      placeholder={`Standaard: ${r.zorgvormStandaard}`}
+                      options={ZORGVORMEN.map((z) => ({ value: z, label: z }))}
+                    />
+                  </td>
+                  <td className="px-5 py-2 w-[40%]">
                     <SaveInput
                       initial={r.omschrijving ?? ""}
                       placeholder="Omschrijving zorgproduct…"
