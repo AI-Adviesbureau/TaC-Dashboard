@@ -28,7 +28,7 @@ function DashboardBody({
     </div>
   );
 
-  if (pathname.startsWith("/overzicht")) {
+  if (pathname.startsWith("/overzicht") || pathname.startsWith("/jeugdmonitor")) {
     return <OverviewFilterProvider key={regio}>{body}</OverviewFilterProvider>;
   }
   return body;

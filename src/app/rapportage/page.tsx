@@ -75,7 +75,7 @@ function Rapportage() {
       ? `${van ? kort(van) : "…"} t/m ${tot ? kort(tot) : "…"}`
       : jaar
         ? maand
-          ? `${MAAND[parseInt(maand, 10) - 1]} ${jaar}`
+          ? `${jaar} t/m ${MAAND[parseInt(maand, 10) - 1]}`
           : jaar
         : "alle perioden";
 
@@ -133,7 +133,7 @@ function Rapportage() {
               <KpiCard
                 label="Kosten / cliënt" icon={Wallet} accent="blue"
                 value={fmtEuro(k!.kern.kostenPerClient)}
-                hint={`${fmtGetal(k!.kern.clienten)} cliënten`}
+                hint={`${fmtGetal(k!.kern.actieve_clienten)} actieve cliënten`}
               />
               <KpiCard
                 label="Duurzame uitstroom" icon={HeartHandshake} accent="green"

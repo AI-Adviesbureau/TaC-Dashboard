@@ -9,7 +9,7 @@
  */
 import * as XLSX from "xlsx";
 import { sql } from "./db";
-import { ensureTrajectUniekView } from "./schema";
+import { recreateViews } from "./schema";
 import {
   normaliseerGemeente,
   bepaalRegio,
@@ -305,7 +305,9 @@ export async function createSchema() {
   await sql`CREATE INDEX traject_gemeente_idx ON traject (gemeente)`;
   await sql`CREATE INDEX traject_rel_idx ON traject (rel_nr)`;
   await sql`CREATE INDEX traject_code_idx ON traject (code)`;
-  await ensureTrajectUniekView();
+  // Views onvoorwaardelijk herbouwen: DROP TABLE ... CASCADE hierboven heeft ze
+  // verwijderd, en een gecachte 'ready'-check zou dat anders missen.
+  await recreateViews();
 
   await sql`DROP TABLE IF EXISTS plek`;
   await sql`CREATE TABLE plek (id SERIAL PRIMARY KEY, volgnr INT, maanden JSONB, bezette_maanden INT DEFAULT 0)`;

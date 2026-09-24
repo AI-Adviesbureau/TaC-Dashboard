@@ -9,7 +9,8 @@ sessies. De cursief/▸ gemarkeerde punten vragen nog bevestiging door Anniek
 | KPI | Implementatie |
 | --- | --- |
 | **Doorlooptijd** | Aantal maanden tussen `INTAKE/START` en `EIND`. Berekend uit de datums (decimaal, /30,4375 dagen); voor 2026 wordt de bronkolom gebruikt indien aanwezig. Lopende trajecten (zonder einddatum) tellen niet mee in het gemiddelde/mediaan. |
-| **Kosten per cliënt** | `sum(inkoopBEH + inkoopRB) / aantal unieke relatienummers` binnen de selectie. Eigen regie telt niet als inkoop. |
+| **Kosten per cliënt** | **Gemeente-definitie (sinds 2026-09-24):** gedeclareerd t/m maand ÷ actieve cliënten (unieke cliënten met ≥ 1 declaratie). De oude interne maat `inkoop ÷ cliënten` heet nu **Inkoop per cliënt** (Kosten & budget). |
+| **Actieve cliënten** | Unieke relatienummers met een declaratie (maandkolom > 0) t/m de gekozen maand — "actieve cliënten [gedeclareerd]" bij de gemeente. |
 | **Duurzame uitstroom** | Aandeel afgesloten trajecten waarbij dezelfde cliënt (relatienummer) binnen **12 maanden** na de einddatum geen nieuw traject start. Alleen trajecten waarvan dit venster van 12 mnd al verstreken is (eind ≤ vandaag − 12 mnd) tellen mee, om vertekening door recente afsluitingen te voorkomen. |
 | **Budgetrealisatie** | `gerealiseerde omzet / afgesproken plafond` per gemeente/regio. Toont realisatie zonder norm zolang `budget_plafond` leeg is. |
 | **Marge** | `omzet − inkoopBEH − inkoopRB − 20% overhead`. |
@@ -131,6 +132,59 @@ exacte kopie; "1× per traject" is een redelijke benadering.)
 - **Custom periode-selector** toegevoegd: naast jaar/maand kan een eigen
   datumrange (van–tot) gekozen worden; filtert op intakedatum. Blijft — net als
   jaar/maand — leeg na een browser-refresh.
+
+## Aansluiting op het gemeentedashboard (Jeugdmonitor) — 2026-09-24
+
+Anniek stuurde screenshots van de Power BI "Jeugd monitor 2026" (Sociaal Domein
+Limburg-Noord, data t/m facturatie juli) plus de bijgewerkte Excel. Daaruit zijn
+de definities van de gemeente afgeleid en overgenomen:
+
+| Begrip (gemeente) | Onze implementatie |
+| --- | --- |
+| Realisatie | som maandkolommen jan..M van de jaarlijst (`r1..rM` in `traject_lijst`) |
+| Actieve cliënten [gedeclareerd] | unieke `rel_nr` met `r1+…+rM > 0` |
+| Kosten per cliënt | realisatie ÷ actieve cliënten |
+| Actieve cliënten [toegewezen] | lopend traject in de maand (intake ≤ maandeinde, eind leeg of ≥ maandbegin) |
+| Budgetverbruik | realisatie ÷ budget |
+| Prognose | realisatie + (realisatie ÷ M) × (12 − M) (lineair) |
+| Dekking | **alleen Noord-Limburg** (7 gemeenten) — kies regio Noord om te vergelijken |
+
+### Reconciliatie (nieuwe Excel, Noord-Limburg)
+
+| | Gemeente (t/m jul) | Dashboard (t/m jul) | Verschil |
+| --- | --- | --- | --- |
+| Realisatie 2026 | € 374.963 | € 387.419 | +€ 12.456 (+3,3%) |
+| Actieve cliënten 2026 | 153 | 158 | +5 |
+| Kosten per cliënt 2026 | € 2.451 | € 2.452 | ✓ |
+| Venray / Beesel / Gennep / Bergen | 8 / 4 / 1 / 1 cl. | identiek, ook bedragen | ✓ exact |
+| Horst a/d Maas · Peel en Maas | 17 / 12 | 16 / 13 | 1 cliënt (± € 3.030) onder andere gemeente geboekt |
+| Venlo | 110 / € 268.454 | 115 / € 280.913 | latere declaraties (Excel is actueler) |
+| 2025 heel jaar | 193 cl. / € 596.724 / KpC € 3.092 | 204 / € 629.154 / € 3.084 | +5% (acceptatie/indexatie bij gemeente) |
+
+Conclusie: de definities kloppen 1-op-1 (KpC identiek, kleine gemeenten exact).
+De restverschillen komen doordat onze Excel actueler is dan het gemeentedashboard
+en door gemeente-toewijzing van enkele cliënten.
+
+### Budget: basis vs. speling
+De gemeente rekent verbruik tegen het **basisbudget € 483.960** (+ speling
+€ 300.000 = € 783.960). Anniek's plafonds ("toegekend incl. afwijking", € 793.000
+totaal) liggen op het niveau *incl. speling*. Ons budgetverbruik is daardoor
+lager dan de 77,48% van de gemeente. ▸ Vraag: basisbudget per gemeente aanleveren
+als het gemeentepercentage exact gevolgd moet worden.
+
+### Doorgevoerd
+- View `traject_lijst` heeft nu `r1..r12` (gedeclareerd per maand); migratie
+  automatisch (`ensureTrajectUniekView` checkt kolom `r12`), en `createSchema`
+  herbouwt de views onvoorwaardelijk (`recreateViews`) na een (her)ingest.
+- **Maandkiezer = "t/m maand"** (cumulatief) i.p.v. instroommaand — voor
+  realisatie, actieve cliënten, KpC, budget en de Trajecten-lijst (alleen
+  trajecten met declaratie t/m die maand). Aantal trajecten/doorlooptijd/uitstroom
+  blijven op de hele lijst.
+- Nieuwe module **Jeugdmonitor** (`/jeugdmonitor`): KPI's, realisatie
+  cumulatief vs. budget + prognose, actieve cliënten per maand (toegewezen vs.
+  gedeclareerd), per-gemeente tabel, vergelijking met vorig jaar (zelfde t/m-maand).
+- CLI-ingest werkte niet meer (`server-only` in `schema.ts`); opgelost.
+- Nieuwe Excel (t/m sept 2026) ingeladen: 3.606 rijen, 1.909 cliënten; 2026-lijst 522 rijen.
 
 ## Bewuste UX-keuze: datum leeg na refresh
 

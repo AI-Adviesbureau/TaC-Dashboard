@@ -28,7 +28,7 @@ export function Topbar({ naam }: { naam: string | null }) {
         </div>
 
         <RegioSwitch />
-        {pathname.startsWith("/overzicht") && <GemeentePicker />}
+        {(pathname.startsWith("/overzicht") || pathname.startsWith("/jeugdmonitor")) && <GemeentePicker />}
         <PeriodPicker />
         <UserMenu naam={naam} />
       </div>
@@ -83,7 +83,7 @@ function PeriodPicker() {
       ? `${f.van ? kort(f.van) : "…"} – ${f.tot ? kort(f.tot) : "…"}`
       : f.jaar
         ? f.maand
-          ? `${MAAND_NAMEN_VOL[f.maand - 1]} ${f.jaar}`
+          ? `${f.jaar} t/m ${MAAND_NAMEN_VOL[f.maand - 1].toLowerCase()}`
           : `${f.jaar}`
         : "Alle perioden";
 
@@ -141,9 +141,12 @@ function PeriodPicker() {
 
           {f.jaar && (
             <>
-              <div className="mb-2 mt-3 text-xs font-bold uppercase tracking-wide text-[var(--muted)]">
-                Maand (optioneel)
+              <div className="mb-1 mt-3 text-xs font-bold uppercase tracking-wide text-[var(--muted)]">
+                T/m maand (optioneel)
               </div>
+              <p className="mb-2 text-[10px] text-[var(--muted)]">
+                Cumulatief: gedeclareerd en actieve cliënten t/m die maand — zoals het gemeentedashboard.
+              </p>
               <div className="grid grid-cols-4 gap-1.5">
                 {MAAND_NAMEN_VOL.map((m, i) => (
                   <button

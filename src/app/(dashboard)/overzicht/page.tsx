@@ -35,7 +35,7 @@ export default function OverzichtPage() {
   const router = useRouter();
   const f = useFilters();
   const { gemeenten } = useOverviewFilters();
-  const { jaar, regio, van, tot } = f;
+  const { jaar, maand, regio, van, tot } = f;
   const extra = gemeenten.length ? { gemeente: gemeenten } : undefined;
   const ov = useApi<OverzichtData>("/api/overview", extra);
   const tr = useApi<TrendPunt[]>("/api/trend", extra);
@@ -48,7 +48,9 @@ export default function OverzichtPage() {
     van || tot
       ? `${van ? kort(van) : "…"} – ${tot ? kort(tot) : "…"}`
       : jaar
-        ? `${jaar}`
+        ? maand
+          ? `${jaar} t/m maand ${maand}`
+          : `${jaar}`
         : "alle perioden";
 
   return (
@@ -102,7 +104,7 @@ export default function OverzichtPage() {
           accent="blue"
           loading={ov.loading}
           value={fmtEuro(k?.kern.kostenPerClient)}
-          hint={k ? `${fmtGetal(k.kern.clienten)} cliënten` : undefined}
+          hint={k ? `${fmtGetal(k.kern.actieve_clienten)} actieve cliënten` : undefined}
           definitie={DEFINITIES.kostenPerClient}
           trend={k?.trend ? { pct: k.trend.kostenPerClient, goodWhenUp: false } : undefined}
         />

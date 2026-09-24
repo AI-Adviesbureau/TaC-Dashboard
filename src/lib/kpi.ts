@@ -1,11 +1,12 @@
 import "server-only";
 import { sql } from "./db";
-import { addGemeenteFilter } from "./filter-sql";
+import { addGemeenteFilter, realisatieTmExpr } from "./filter-sql";
 import { ensureTrajectUniekView, TRAJECT_BRON } from "./schema";
 
 export interface Filters {
   regio?: string | null;
   jaar?: number | null;
+  /** "t/m maand" (cumulatief gedeclareerd), zoals het gemeentedashboard. */
   maand?: number | null;
   van?: string | null; // custom periode (intake vanaf)
   tot?: string | null; // custom periode (intake t/m)
@@ -26,7 +27,8 @@ function buildWhere(f: Filters, alias = "t", extraConds: string[] = []) {
   if (f.regio && f.regio !== "Totaal") add((n) => `${alias}.regio = $${n}`, f.regio);
   // Jaar = Excel-lijst (tabblad bron_jaar), niet intakejaar.
   if (f.jaar) add((n) => `${alias}.bron_jaar = $${n}`, f.jaar);
-  if (f.maand) add((n) => `${alias}.maand_nr = $${n}`, f.maand);
+  // Let op: f.maand is géén rijfilter meer, maar bepaalt "t/m maand" in de
+  // realisatie-aggregaties (zie realisatieTmExpr).
   if (f.van) add((n) => `${alias}.intake >= $${n}`, f.van);
   if (f.tot) add((n) => `${alias}.intake <= $${n}`, f.tot);
   addGemeenteFilter(f.gemeente, alias, add);
@@ -39,12 +41,13 @@ function buildWhere(f: Filters, alias = "t", extraConds: string[] = []) {
 
 interface KerncijfersRow {
   aantal: number;
-  clienten: number;
+  clienten: number; // unieke cliënten op de lijst (incl. zonder declaratie)
+  actieve_clienten: number; // unieke cliënten mét declaratie t/m maand (gemeente-definitie)
   gem_dlt: number | null;
   med_dlt: number | null;
   inkoop: number;
   omzet: number; // beschikt budget (1x per traject)
-  gerealiseerd: number; // som maandfacturatie
+  gerealiseerd: number; // gedeclareerd t/m maand (som maandkolommen)
   overhead: number;
   betaald: number;
   openstaand: number;
@@ -53,16 +56,18 @@ interface KerncijfersRow {
 
 async function kerncijfers(f: Filters): Promise<KerncijfersRow> {
   const { clause, params } = buildWhere(f);
+  const R = realisatieTmExpr(f.maand);
   const text = `
     SELECT
       count(*)::int AS aantal,
       count(distinct rel_nr)::int AS clienten,
+      count(distinct rel_nr) FILTER (WHERE ${R} > 0)::int AS actieve_clienten,
       avg(doorlooptijd) FILTER (WHERE doorlooptijd IS NOT NULL AND NOT lopend) AS gem_dlt,
       percentile_cont(0.5) WITHIN GROUP (ORDER BY doorlooptijd)
         FILTER (WHERE doorlooptijd IS NOT NULL AND NOT lopend) AS med_dlt,
       coalesce(sum(inkoop), 0) AS inkoop,
       coalesce(sum(omzet), 0) AS omzet,
-      coalesce(sum(realisatie), 0) AS gerealiseerd,
+      coalesce(sum(${R}), 0) AS gerealiseerd,
       coalesce(sum(overhead), 0) AS overhead,
       coalesce(sum(betaald_bedrag), 0) AS betaald,
       coalesce(sum(openstaand), 0) AS openstaand,
@@ -73,6 +78,7 @@ async function kerncijfers(f: Filters): Promise<KerncijfersRow> {
   return {
     aantal: Number(r.aantal),
     clienten: Number(r.clienten),
+    actieve_clienten: Number(r.actieve_clienten),
     gem_dlt: r.gem_dlt === null ? null : Number(r.gem_dlt),
     med_dlt: r.med_dlt === null ? null : Number(r.med_dlt),
     inkoop: Number(r.inkoop),
@@ -164,7 +170,13 @@ function pctVerschil(huidig: number | null, vorig: number | null): number | null
 }
 
 export interface OverzichtData {
-  kern: KerncijfersRow & { kostenPerClient: number | null; marge: number };
+  kern: KerncijfersRow & {
+    /** Gemeente-definitie: gedeclareerd ÷ actieve cliënten. */
+    kostenPerClient: number | null;
+    /** Interne maat: inkoopkosten ÷ unieke cliënten op de lijst. */
+    inkoopPerClient: number | null;
+    marge: number;
+  };
   uitstroom: { pct: number | null; totaal: number; duurzaam: number };
   budget: { realisatie: number; plafond: number | null; pct: number | null };
   trend: {
@@ -182,24 +194,31 @@ export async function getOverzicht(f: Filters): Promise<OverzichtData> {
     duurzameUitstroom(f),
     budgetRealisatie(f),
   ]);
-  const kostenPerClient = kc.clienten > 0 ? Math.round((kc.inkoop / kc.clienten) * 100) / 100 : null;
+  const kpc = (k: KerncijfersRow) =>
+    k.actieve_clienten > 0 ? Math.round((k.gerealiseerd / k.actieve_clienten) * 100) / 100 : null;
+  const kostenPerClient = kpc(kc);
+  const inkoopPerClient = kc.clienten > 0 ? Math.round((kc.inkoop / kc.clienten) * 100) / 100 : null;
   // Marge op basis van werkelijk gefactureerde omzet minus inkoop en overhead.
   const marge = kc.gerealiseerd - kc.inkoop - kc.overhead;
 
-  // Trend t.o.v. vorig jaar (alleen wanneer een jaar is gekozen).
+  // Trend t.o.v. vorig jaar (zelfde t/m-maand), alleen wanneer een jaar is gekozen.
   let trend: OverzichtData["trend"] = null;
   if (f.jaar) {
     const prev = await kerncijfers({ ...f, jaar: f.jaar - 1 });
-    const prevKpc = prev.clienten > 0 ? prev.inkoop / prev.clienten : null;
     trend = {
       doorlooptijd: pctVerschil(kc.gem_dlt, prev.gem_dlt),
-      kostenPerClient: pctVerschil(kostenPerClient, prevKpc),
+      kostenPerClient: pctVerschil(kostenPerClient, kpc(prev)),
       omzet: pctVerschil(kc.gerealiseerd, prev.gerealiseerd),
       aantal: pctVerschil(kc.aantal, prev.aantal),
     };
   }
 
-  return { kern: { ...kc, kostenPerClient, marge }, uitstroom: uit, budget: bud, trend };
+  return {
+    kern: { ...kc, kostenPerClient, inkoopPerClient, marge },
+    uitstroom: uit,
+    budget: bud,
+    trend,
+  };
 }
 
 /** Trend van in- en uitstroom: per maand (binnen een jaar) of per jaar. */
@@ -290,29 +309,30 @@ export interface GemeentePrognoseRow {
 export async function getGemeentePrognose(f: Filters): Promise<GemeentePrognoseRow[]> {
   await ensureTrajectUniekView();
   const { clause, params } = buildWhere(f, "t", ["t.gemeente IS NOT NULL"]);
+  const R = realisatieTmExpr(f.maand);
   const text = `
     SELECT gemeente,
       count(*)::int AS aantal,
       count(*) FILTER (WHERE lopend)::int AS lopend,
       coalesce(sum(omzet), 0) AS aangevraagd,
-      coalesce(sum(realisatie), 0) AS gedeclareerd,
-      coalesce(sum(omzet), 0) - coalesce(sum(realisatie), 0) AS resterend,
+      coalesce(sum(${R}), 0) AS gedeclareerd,
+      coalesce(sum(omzet), 0) - coalesce(sum(${R}), 0) AS resterend,
       coalesce(sum(
         CASE
-          WHEN NOT lopend THEN realisatie
-          WHEN omzet <= 0 AND realisatie > 0 THEN
-            realisatie + GREATEST(
+          WHEN NOT lopend THEN ${R}
+          WHEN omzet <= 0 AND ${R} > 0 THEN
+            ${R} + GREATEST(
               COALESCE(NULLIF(periode, 0), 12) - COALESCE(doorlooptijd, 0),
               0
-            ) * (realisatie / GREATEST(COALESCE(doorlooptijd, 1), 0.5))
-          WHEN omzet <= 0 THEN realisatie
+            ) * (${R} / GREATEST(COALESCE(doorlooptijd, 1), 0.5))
+          WHEN omzet <= 0 THEN ${R}
           WHEN doorlooptijd IS NULL OR doorlooptijd <= 0 THEN omzet
           ELSE LEAST(
             omzet,
-            realisatie + GREATEST(
+            ${R} + GREATEST(
               COALESCE(NULLIF(periode, 0), doorlooptijd, 12) - doorlooptijd,
               0
-            ) * (realisatie / GREATEST(doorlooptijd, 0.5))
+            ) * (${R} / GREATEST(doorlooptijd, 0.5))
           )
         END
       ), 0) AS prognose

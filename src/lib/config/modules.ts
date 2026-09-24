@@ -4,6 +4,7 @@ import {
   Wallet,
   Users,
   Settings,
+  Landmark,
   type LucideIcon,
 } from "lucide-react";
 
@@ -36,6 +37,12 @@ export const MODULES: ModuleDef[] = [
     label: "Kosten & budget",
     icon: Wallet,
     beschrijving: "Kosten per cliënt, marge en budgetrealisatie",
+  },
+  {
+    href: "/jeugdmonitor",
+    label: "Jeugdmonitor",
+    icon: Landmark,
+    beschrijving: "Zelfde cijfers en definities als het gemeentedashboard",
   },
   {
     href: "/behandelaren",

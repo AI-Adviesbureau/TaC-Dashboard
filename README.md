@@ -26,6 +26,10 @@ met **Neon (Postgres)** als database en een eigen **loginscherm**.
   en een "Data wissen"-knop), budgetplafonds invoeren (activeert de
   budgetrealisatie-KPI), productcode-omschrijvingen, behandelaar-namen, en eigen
   wachtwoord wijzigen.
+- **Jeugdmonitor**: dezelfde definities als het gemeentedashboard (Sociaal Domein
+  Limburg-Noord) — realisatie t/m maand, actieve cliënten, kosten per cliënt,
+  budgetverbruik + prognose, per gemeente en t.o.v. vorig jaar. Kies regio
+  Noord-Limburg en een "t/m maand" om 1-op-1 te vergelijken.
 - **Maandrapportage (PDF)**: knop "Exporteer rapportage" op het overzicht opent
   een print-klare rapportage (`/rapportage`) in huisstijl — opslaan als PDF voor
   het MT-overleg, met de op dat moment gekozen regio/periode.

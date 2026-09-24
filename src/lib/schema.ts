@@ -1,9 +1,18 @@
-import "server-only";
+// Geen "server-only" hier: dit bestand wordt ook door het CLI-ingest-script
+// (scripts/ingest.ts, plain Node) geladen. Bevat geen geheimen.
 import { sql } from "./db";
+
+/** Maandkolommen r1..r12: gedeclareerd bedrag per maand (uit realisatie-JSON). */
+const MAAND_KOLOMMEN = Array.from(
+  { length: 12 },
+  (_, i) => `sum(coalesce((realisatie->>'${i + 1}')::numeric, 0)) AS r${i + 1}`
+).join(",\n    ");
 
 /**
  * Eén rij per traject per Excel-lijst (tabblad/jaar).
  * bron_jaar = welke lijst (2026, 2025, …); jaar is hetzelfde (filter op lijst).
+ * r1..r12 = gedeclareerd per maand, zodat "t/m maand" cumulatief berekend kan
+ * worden zoals het gemeentedashboard (Jeugdmonitor) dat doet.
  */
 export const TRAJECT_LIJST_VIEW_SQL = `
   CREATE VIEW traject_lijst AS
@@ -26,6 +35,7 @@ export const TRAJECT_LIJST_VIEW_SQL = `
     max(NULLIF(periode, 0)) AS periode,
     max(inkoop_beh + inkoop_rb) AS inkoop,
     sum(realisatie_totaal) AS realisatie,
+    ${MAAND_KOLOMMEN},
     sum(overhead) AS overhead,
     sum(betaald_bedrag) AS betaald_bedrag,
     (array_agg(openstaand ORDER BY id DESC))[1] AS openstaand,
@@ -56,9 +66,22 @@ export const TRAJECT_UNIEK_VIEW_SQL = `
   FROM traject
   GROUP BY rel_nr, coalesce(to_char(intake,'YYYY-MM-DD'), 'noid:'||id::text)`;
 
+/** Kolom waaraan de nieuwste view-versie herkend wordt (migratiecheck). */
+const VIEW_VERSIE_KOLOM = "r12";
+
 let viewsReady: Promise<void> | null = null;
 
-/** Zorgt dat traject_lijst (en legacy traject_uniek) bestaan. Idempotent. */
+/** Dropt en herbouwt de views onvoorwaardelijk (na een (her)ingest). */
+export async function recreateViews() {
+  viewsReady = null;
+  await sql`DROP VIEW IF EXISTS traject_uniek`;
+  await sql`DROP VIEW IF EXISTS traject_lijst`;
+  await sql.query(TRAJECT_LIJST_VIEW_SQL.trim(), []);
+  await sql.query(TRAJECT_UNIEK_VIEW_SQL.trim(), []);
+  viewsReady = Promise.resolve();
+}
+
+/** Zorgt dat traject_lijst (nieuwste versie) en legacy traject_uniek bestaan. Idempotent. */
 export async function ensureTrajectUniekView() {
   if (!viewsReady) {
     viewsReady = (async () => {
@@ -73,7 +96,7 @@ export async function ensureTrajectUniekView() {
         SELECT column_name FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'traject_lijst'
       `) as { column_name: string }[];
-      if (cols.some((c) => c.column_name === "bron_jaar")) return;
+      if (cols.some((c) => c.column_name === VIEW_VERSIE_KOLOM)) return;
 
       await sql`DROP VIEW IF EXISTS traject_uniek`;
       await sql`DROP VIEW IF EXISTS traject_lijst`;

@@ -1,7 +1,7 @@
 import "server-only";
 import { sql } from "./db";
 import type { Filters } from "./kpi";
-import { addGemeenteFilter } from "./filter-sql";
+import { addGemeenteFilter, realisatieTmExpr } from "./filter-sql";
 import { ensureTrajectUniekView, TRAJECT_BRON } from "./schema";
 import type { TrajectRow } from "./types";
 
@@ -32,7 +32,8 @@ function buildWhere(f: TrajectFilters, search?: string) {
   };
   if (f.regio && f.regio !== "Totaal") add((n) => `t.regio = $${n}`, f.regio);
   if (f.jaar) add((n) => `t.bron_jaar = $${n}`, f.jaar);
-  if (f.maand) add((n) => `t.maand_nr = $${n}`, f.maand);
+  // "t/m maand": alleen trajecten met een declaratie t/m die maand (actieve cliënten).
+  if (f.maand && f.maand < 12) parts.push(`${realisatieTmExpr(f.maand)} > 0`);
   if (f.van) add((n) => `t.intake >= $${n}`, f.van);
   if (f.tot) add((n) => `t.intake <= $${n}`, f.tot);
   addGemeenteFilter(f.gemeente, "t", add);
@@ -131,13 +132,15 @@ function mapRow(r: Record<string, unknown>): TrajectRow {
 export async function getKosten(f: Filters) {
   await ensureTrajectUniekView();
   const { clause, params } = buildWhere(f);
+  const R = realisatieTmExpr(f.maand);
   const perGemeenteText = `
     SELECT t.gemeente, t.regio,
       count(*)::int AS aantal,
       count(distinct t.rel_nr)::int AS clienten,
+      count(distinct t.rel_nr) FILTER (WHERE ${R} > 0)::int AS actieve_clienten,
       coalesce(sum(t.inkoop),0) AS inkoop,
       coalesce(sum(t.omzet),0) AS omzet,
-      coalesce(sum(t.realisatie),0) AS gerealiseerd,
+      coalesce(sum(${R}),0) AS gerealiseerd,
       coalesce(sum(t.overhead),0) AS overhead,
       coalesce(sum(t.realisatie - t.inkoop - t.overhead),0) AS marge,
       coalesce(sum(t.openstaand),0) AS openstaand
@@ -179,13 +182,18 @@ export async function getKosten(f: Filters) {
       regio: String(r.regio),
       aantal: Number(r.aantal),
       clienten: Number(r.clienten),
+      actieveClienten: Number(r.actieve_clienten),
       inkoop: Number(r.inkoop),
       omzet: Number(r.omzet),
       gerealiseerd: Number(r.gerealiseerd),
       overhead: Number(r.overhead),
       marge: Number(r.marge),
       openstaand: Number(r.openstaand),
-      kostenPerClient: Number(r.clienten) > 0 ? Number(r.inkoop) / Number(r.clienten) : null,
+      // Gemeente-definitie: gedeclareerd ÷ actieve cliënten.
+      kostenPerClient:
+        Number(r.actieve_clienten) > 0 ? Number(r.gerealiseerd) / Number(r.actieve_clienten) : null,
+      // Interne maat: inkoop ÷ unieke cliënten.
+      inkoopPerClient: Number(r.clienten) > 0 ? Number(r.inkoop) / Number(r.clienten) : null,
     })),
     plekken,
     plafonds: plafonds.map((r) => ({

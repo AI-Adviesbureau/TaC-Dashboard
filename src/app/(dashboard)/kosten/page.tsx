@@ -17,6 +17,7 @@ interface KostenData {
     regio: string;
     aantal: number;
     clienten: number;
+    actieveClienten: number;
     inkoop: number;
     omzet: number;
     gerealiseerd: number;
@@ -24,6 +25,7 @@ interface KostenData {
     marge: number;
     openstaand: number;
     kostenPerClient: number | null;
+    inkoopPerClient: number | null;
   }[];
   plekken: { maand: string; bezet: number }[];
   plafonds: {
@@ -46,7 +48,7 @@ export default function KostenPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-5">
       {/* KPI's */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard
           label="Beschikt budget"
           icon={TrendingUp}
@@ -89,7 +91,16 @@ export default function KostenPage() {
           loading={ov.loading}
           value={fmtEuro(k?.kern.kostenPerClient)}
           definitie={DEFINITIES.kostenPerClient}
-          hint={k ? `${fmtGetal(k.kern.clienten)} cliënten` : undefined}
+          hint={k ? `${fmtGetal(k.kern.actieve_clienten)} actieve cliënten` : undefined}
+        />
+        <KpiCard
+          label="Inkoop / cliënt"
+          icon={Coins}
+          accent="yellow"
+          loading={ov.loading}
+          value={fmtEuro(k?.kern.inkoopPerClient)}
+          definitie={DEFINITIES.inkoopPerClient}
+          hint={k ? `${fmtGetal(k.kern.clienten)} cliënten op lijst` : undefined}
         />
       </div>
 
@@ -143,7 +154,7 @@ export default function KostenPage() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Kosten per cliënt per gemeente */}
         <Card className="animate-in">
-          <CardHeader title="Kosten per cliënt" subtitle="Gemiddelde inkoopkosten per cliënt, per gemeente" />
+          <CardHeader title="Kosten per cliënt" subtitle="Gedeclareerd ÷ actieve cliënten, per gemeente (gemeente-definitie)" />
           <div className="px-5 pb-5 pt-3">
             {kd.loading ? (
               <Skeleton className="h-64 w-full" />
