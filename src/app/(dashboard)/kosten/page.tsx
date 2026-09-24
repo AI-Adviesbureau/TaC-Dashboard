@@ -2,6 +2,8 @@
 
 import { Wallet, TrendingUp, Coins, Users, Info } from "lucide-react";
 import { useApi } from "@/lib/use-api";
+import { useFilters } from "@/components/filters/filter-context";
+import { BudgetBasisSwitch } from "@/components/filters/budget-basis-switch";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton, EmptyState } from "@/components/ui/states";
@@ -33,11 +35,13 @@ interface KostenData {
     regio: string | null;
     gemeente: string | null;
     plafond_bedrag: number | null;
+    basis_bedrag: number | null;
     plekken: number | null;
   }[];
 }
 
 export default function KostenPage() {
+  const { budgetBasis } = useFilters();
   const ov = useApi<OverzichtData>("/api/overview");
   const kd = useApi<KostenData>("/api/kosten");
   const k = ov.data;
@@ -108,7 +112,12 @@ export default function KostenPage() {
       <Card className="animate-in">
         <CardHeader
           title="Budgetrealisatie per gemeente"
-          subtitle="Gerealiseerde omzet versus afgesproken plafond"
+          subtitle={
+            budgetBasis === "basis"
+              ? "Gedeclareerd versus basisbudget (excl. speling) — zoals de gemeente rekent"
+              : "Gedeclareerd versus toegekend budget incl. speling"
+          }
+          action={<BudgetBasisSwitch />}
         />
         <div className="px-5 pb-5 pt-3">
           {!heeftPlafonds ? (
@@ -131,9 +140,8 @@ export default function KostenPage() {
           ) : kd.data && kd.data.perGemeente.length ? (
             <div className="mt-4 space-y-3">
               {kd.data.perGemeente.map((g) => {
-                const plafond = kd.data!.plafonds.find(
-                  (p) => p.gemeente === g.gemeente
-                )?.plafond_bedrag;
+                const rij = kd.data!.plafonds.find((p) => p.gemeente === g.gemeente);
+                const plafond = budgetBasis === "basis" ? rij?.basis_bedrag : rij?.plafond_bedrag;
                 return (
                   <BudgetRij
                     key={g.gemeente}

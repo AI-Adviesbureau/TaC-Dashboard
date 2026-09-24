@@ -4,6 +4,7 @@ import { Coins, Users, Wallet, Target, Landmark, Info } from "lucide-react";
 import { useApi } from "@/lib/use-api";
 import { useFilters } from "@/components/filters/filter-context";
 import { useOverviewFilters } from "@/components/filters/overview-filter-context";
+import { BudgetBasisSwitch } from "@/components/filters/budget-basis-switch";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { Card, CardHeader } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -43,6 +44,7 @@ export default function JeugdmonitorPage() {
             </>
           )}
         </p>
+        <BudgetBasisSwitch />
         {nietNoord && (
           <button
             onClick={() => f.setRegio("Noord-Limburg")}
@@ -94,8 +96,10 @@ export default function JeugdmonitorPage() {
           value={h?.verbruikPct != null ? fmtProcent(h.verbruikPct, 1) : "n.t.b."}
           hint={
             h?.plafond != null
-              ? `van ${fmtEuroKort(h.plafond)} · prognose ${fmtEuroKort(h.prognose)} (${fmtProcent(h.prognosePct ?? 0, 0)})`
-              : "geen plafond voor deze selectie"
+              ? `van ${fmtEuroKort(h.plafond)} ${f.budgetBasis === "basis" ? "basisbudget" : "incl. speling"} · prognose ${fmtEuroKort(h.prognose)} (${fmtProcent(h.prognosePct ?? 0, 0)})`
+              : f.budgetBasis === "basis"
+                ? "basisbudget nog niet ingevuld (Beheer → Budgetplafonds)"
+                : "geen budget voor deze selectie"
           }
           definitie={DEFINITIES.budgetverbruik}
         />

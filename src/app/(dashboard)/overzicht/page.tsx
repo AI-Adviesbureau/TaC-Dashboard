@@ -6,6 +6,7 @@ import { useApi } from "@/lib/use-api";
 import { filtersToQuery } from "@/lib/types";
 import { useFilters } from "@/components/filters/filter-context";
 import { useOverviewFilters } from "@/components/filters/overview-filter-context";
+import { BudgetBasisSwitch } from "@/components/filters/budget-basis-switch";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton, EmptyState, ErrorState } from "@/components/ui/states";
@@ -72,6 +73,7 @@ export default function OverzichtPage() {
             </span>
           )}
         </p>
+        <BudgetBasisSwitch className="hidden xl:flex" />
         <button
           onClick={() =>
             window.open(
@@ -131,8 +133,10 @@ export default function OverzichtPage() {
           value={k?.budget.pct != null ? fmtProcent(k.budget.pct, 0) : "n.t.b."}
           hint={
             k?.budget.plafond != null
-              ? `van ${fmtEuroKort(k.budget.plafond)}`
-              : "plafonds nog aanleveren"
+              ? `van ${fmtEuroKort(k.budget.plafond)} (${f.budgetBasis === "basis" ? "basisbudget" : "incl. speling"})`
+              : jaar
+                ? "geen budget voor deze selectie"
+                : "kies een jaar"
           }
           definitie={DEFINITIES.budgetrealisatie}
         />

@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     regio: b.regio || null,
     gemeente: b.gemeente || null,
     plafond_bedrag: b.plafond_bedrag != null && b.plafond_bedrag !== "" ? Number(b.plafond_bedrag) : null,
+    basis_bedrag: b.basis_bedrag != null && b.basis_bedrag !== "" ? Number(b.basis_bedrag) : null,
     plekken: b.plekken != null && b.plekken !== "" ? parseInt(b.plekken, 10) : null,
   });
   return NextResponse.json({ ok: true });

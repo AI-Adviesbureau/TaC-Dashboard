@@ -3,6 +3,7 @@ import { sql } from "./db";
 import type { Filters } from "./kpi";
 import { addGemeenteFilter, realisatieTmExpr } from "./filter-sql";
 import { ensureTrajectUniekView, TRAJECT_BRON } from "./schema";
+import { plafondTotaal, plafondPerGemeente } from "./budget";
 
 /**
  * Jeugdmonitor: cijfers volgens de definities van het gemeentedashboard
@@ -90,24 +91,6 @@ function whereBasis(f: Filters, jaren: number[], alias = "t") {
   return { clause: "WHERE " + parts.join(" AND "), params, add, parts };
 }
 
-async function plafondTotaal(f: Filters, jaar: number): Promise<number | null> {
-  const params: unknown[] = [jaar];
-  const conds = ["jaar = $1"];
-  if (f.regio && f.regio !== "Totaal") {
-    params.push(f.regio);
-    conds.push(`(regio = $${params.length} OR regio IS NULL)`);
-  }
-  addGemeenteFilter(f.gemeente, "", (cond, val) => {
-    params.push(val);
-    conds.push(cond(params.length));
-  });
-  const rows = (await sql.query(
-    `SELECT coalesce(sum(plafond_bedrag),0) AS plafond, count(*)::int AS n FROM budget_plafond WHERE ${conds.join(" AND ")}`,
-    params
-  )) as { plafond: number; n: number }[];
-  return Number(rows[0].n) > 0 ? Number(rows[0].plafond) : null;
-}
-
 async function kern(f: Filters, jaar: number, tm: number): Promise<MonitorKern> {
   const R = realisatieTmExpr(tm);
   const { clause, params } = whereBasis(f, [jaar]);
@@ -119,7 +102,12 @@ async function kern(f: Filters, jaar: number, tm: number): Promise<MonitorKern> 
   )) as { actieve: number; realisatie: number }[];
   const realisatie = Number(rows[0].realisatie);
   const actieve = Number(rows[0].actieve);
-  const plafond = await plafondTotaal(f, jaar);
+  const { bedrag: plafond } = await plafondTotaal({
+    jaar,
+    regio: f.regio,
+    gemeente: f.gemeente,
+    basis: f.budgetBasis,
+  });
   const prognose = prognoseLineair(realisatie, tm);
   return {
     jaar,
@@ -145,14 +133,8 @@ async function perGemeente(f: Filters, jaar: number, tm: number): Promise<Monito
      GROUP BY gemeente ORDER BY gedeclareerd DESC, gemeente`,
     params
   )) as { gemeente: string; actieve: number; gedeclareerd: number }[];
-  const plafonds = (await sql`
-    SELECT gemeente, sum(plafond_bedrag) AS plafond FROM budget_plafond
-    WHERE jaar = ${jaar} AND gemeente IS NOT NULL GROUP BY gemeente
-  `) as { gemeente: string; plafond: number }[];
-  const plafondVan = (g: string) => {
-    const p = plafonds.find((x) => x.gemeente === g);
-    return p ? Number(p.plafond) : null;
-  };
+  const plafonds = await plafondPerGemeente(jaar, f.budgetBasis);
+  const plafondVan = (g: string) => plafonds.get(g) ?? null;
   return rows
     .filter((r) => Number(r.actieve) > 0 || Number(r.gedeclareerd) > 0)
     .map((r) => {

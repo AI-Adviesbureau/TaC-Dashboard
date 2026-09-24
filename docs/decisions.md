@@ -165,12 +165,20 @@ Conclusie: de definities kloppen 1-op-1 (KpC identiek, kleine gemeenten exact).
 De restverschillen komen doordat onze Excel actueler is dan het gemeentedashboard
 en door gemeente-toewijzing van enkele cliënten.
 
-### Budget: basis vs. speling
+### Budget: basis vs. speling — schakelaar "Budgetbasis"
 De gemeente rekent verbruik tegen het **basisbudget € 483.960** (+ speling
 € 300.000 = € 783.960). Anniek's plafonds ("toegekend incl. afwijking", € 793.000
-totaal) liggen op het niveau *incl. speling*. Ons budgetverbruik is daardoor
-lager dan de 77,48% van de gemeente. ▸ Vraag: basisbudget per gemeente aanleveren
-als het gemeentepercentage exact gevolgd moet worden.
+totaal) liggen op het niveau *incl. speling*. Daarom is er een schakelaar
+(Overzicht, Kosten & budget, Jeugdmonitor) met i-uitleg:
+- **Toegekend incl. speling** (standaard): kolom `plafond_bedrag` per gemeente.
+- **Basisbudget (gemeente)**: kolom `basis_bedrag`. Per gemeente invulbaar in
+  Beheer → Budgetplafonds. Zolang niet alle gemeenten een basisbudget hebben,
+  valt het totaal terug op een regio-/totaalrij (gemeente leeg); voor 2026
+  Noord-Limburg is die gevuld met € 483.960. Per-gemeente percentages tonen dan
+  "—" tot het basisbudget per gemeente bekend is.
+- Regels (`src/lib/budget.ts`): gemeente-rijen en regio-rijen worden nooit
+  opgeteld; met een gemeentefilter telt alleen de gemeente-rij.
+▸ Vraag aan Anniek: basisbudget per gemeente (excl. speling) aanleveren.
 
 ### Doorgevoerd
 - View `traject_lijst` heeft nu `r1..r12` (gedeclareerd per maand); migratie

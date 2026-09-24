@@ -13,6 +13,7 @@ interface Plafond {
   regio: string | null;
   gemeente: string | null;
   plafond_bedrag: number | null;
+  basis_bedrag: number | null;
   plekken: number | null;
 }
 
@@ -25,6 +26,7 @@ export function PlafondsTab() {
   const [gemeente, setGemeente] = useState("");
   const [bedrag, setBedrag] = useState("");
   const [plekken, setPlekken] = useState("");
+  const [basis, setBasis] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +46,7 @@ export function PlafondsTab() {
     const res = await fetch("/api/beheer/plafonds", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jaar, regio, gemeente, plafond_bedrag: bedrag, plekken }),
+      body: JSON.stringify({ jaar, regio, gemeente, plafond_bedrag: bedrag, basis_bedrag: basis, plekken }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -54,6 +56,7 @@ export function PlafondsTab() {
     setGemeente("");
     setBedrag("");
     setPlekken("");
+    setBasis("");
     load();
   }
 
@@ -70,7 +73,7 @@ export function PlafondsTab() {
           subtitle="Vul per jaar en (optioneel) regio of gemeente het afgesproken plafond in. Dit activeert de budgetrealisatie-KPI met signaalkleuren."
           className="px-0 pt-0"
         />
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-6">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-7">
           <div>
             <label className="mb-1 block text-xs font-bold text-[var(--muted)]">Jaar</label>
             <Select value={jaar} onChange={setJaar} options={JAREN.map((j) => ({ value: j, label: j }))} />
@@ -97,12 +100,22 @@ export function PlafondsTab() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold text-[var(--muted)]">Plafond €</label>
+            <label className="mb-1 block text-xs font-bold text-[var(--muted)]">Toegekend € (incl. speling)</label>
             <input
               value={bedrag}
               onChange={(e) => setBedrag(e.target.value)}
               inputMode="numeric"
-              placeholder="3000000"
+              placeholder="389000"
+              className="w-full rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-green)] focus:ring-4 focus:ring-[var(--brand-green-50)]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-bold text-[var(--muted)]">Basisbudget € (excl. speling)</label>
+            <input
+              value={basis}
+              onChange={(e) => setBasis(e.target.value)}
+              inputMode="numeric"
+              placeholder="optioneel"
               className="w-full rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-green)] focus:ring-4 focus:ring-[var(--brand-green-50)]"
             />
           </div>
@@ -148,7 +161,8 @@ export function PlafondsTab() {
                   <th className="px-5 py-2.5 font-bold">Jaar</th>
                   <th className="px-5 py-2.5 font-bold">Regio</th>
                   <th className="px-5 py-2.5 font-bold">Gemeente</th>
-                  <th className="px-5 py-2.5 text-right font-bold">Plafond</th>
+                  <th className="px-5 py-2.5 text-right font-bold">Toegekend incl. speling</th>
+                  <th className="px-5 py-2.5 text-right font-bold">Basisbudget</th>
                   <th className="px-5 py-2.5 text-right font-bold">Plekken</th>
                   <th className="px-5 py-2.5"></th>
                 </tr>
@@ -161,6 +175,9 @@ export function PlafondsTab() {
                     <td className="px-5 py-2.5">{p.gemeente ?? "alle"}</td>
                     <td className="px-5 py-2.5 text-right tabular-nums">
                       {p.plafond_bedrag != null ? fmtEuro(p.plafond_bedrag) : "—"}
+                    </td>
+                    <td className="px-5 py-2.5 text-right tabular-nums">
+                      {p.basis_bedrag != null ? fmtEuro(p.basis_bedrag) : "—"}
                     </td>
                     <td className="px-5 py-2.5 text-right tabular-nums">{p.plekken ?? "—"}</td>
                     <td className="px-5 py-2.5 text-right">

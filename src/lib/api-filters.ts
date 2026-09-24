@@ -24,6 +24,7 @@ export function parseFilters(url: URL): Filters {
     maand: maand ? parseInt(maand, 10) : null,
     van: p.get("van") || null,
     tot: p.get("tot") || null,
+    budgetBasis: p.get("basis") === "basis" ? "basis" : "incl",
     gemeente: parseGemeente(p),
     code: p.get("code") || null,
     behandelaar: p.get("behandelaar") || null,

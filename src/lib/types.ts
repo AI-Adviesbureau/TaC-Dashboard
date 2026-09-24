@@ -8,13 +8,17 @@ export const REGIO_OPTIES: RegioFilter[] = [
   "Midden-Limburg",
 ];
 
+/** Budgetbasis: toegekend incl. speling (lijst Anniek) of basisbudget (gemeente). */
+export type BudgetBasis = "incl" | "basis";
+
 /** Globale filters die voor het hele dashboard gelden. */
 export interface GlobalFilters {
   regio: RegioFilter;
   jaar: number | null; // null = alle jaren (leeg na refresh)
-  maand: number | null; // 1-12, optioneel
+  maand: number | null; // 1-12, "t/m maand" (cumulatief)
   van: string | null; // ISO-datum (custom periode), sluit jaar/maand uit
   tot: string | null; // ISO-datum
+  budgetBasis: BudgetBasis; // noemer voor budgetverbruik
 }
 
 export const MAAND_NAMEN_VOL = [
@@ -69,6 +73,7 @@ export function filtersToQuery(
   if (f.maand) p.set("maand", String(f.maand));
   if (f.van) p.set("van", f.van);
   if (f.tot) p.set("tot", f.tot);
+  if (f.budgetBasis === "basis") p.set("basis", "basis");
   if (extra) {
     for (const [k, v] of Object.entries(extra)) {
       if (v === undefined || v === null || v === "") continue;

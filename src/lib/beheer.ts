@@ -1,5 +1,6 @@
 import "server-only";
 import { sql } from "./db";
+import { ensureBudgetKolom } from "./budget";
 
 /* ---------- Budgetplafonds ---------- */
 
@@ -8,13 +9,17 @@ export interface Plafond {
   jaar: number;
   regio: string | null;
   gemeente: string | null;
+  /** Toegekend incl. afwijking/speling (lijst Anniek). */
   plafond_bedrag: number | null;
+  /** Basisbudget excl. speling (noemer gemeentedashboard). */
+  basis_bedrag: number | null;
   plekken: number | null;
 }
 
 export async function listPlafonds(): Promise<Plafond[]> {
+  await ensureBudgetKolom();
   const rows = (await sql`
-    SELECT id, jaar, regio, gemeente, plafond_bedrag, plekken
+    SELECT id, jaar, regio, gemeente, plafond_bedrag, basis_bedrag, plekken
     FROM budget_plafond ORDER BY jaar DESC, gemeente NULLS FIRST, regio NULLS FIRST
   `) as Record<string, unknown>[];
   return rows.map((r) => ({
@@ -23,14 +28,16 @@ export async function listPlafonds(): Promise<Plafond[]> {
     regio: (r.regio as string) ?? null,
     gemeente: (r.gemeente as string) ?? null,
     plafond_bedrag: r.plafond_bedrag === null ? null : Number(r.plafond_bedrag),
+    basis_bedrag: r.basis_bedrag === null || r.basis_bedrag === undefined ? null : Number(r.basis_bedrag),
     plekken: r.plekken === null ? null : Number(r.plekken),
   }));
 }
 
 export async function addPlafond(p: Omit<Plafond, "id">): Promise<void> {
+  await ensureBudgetKolom();
   await sql`
-    INSERT INTO budget_plafond (jaar, regio, gemeente, plafond_bedrag, plekken)
-    VALUES (${p.jaar}, ${p.regio}, ${p.gemeente}, ${p.plafond_bedrag}, ${p.plekken})`;
+    INSERT INTO budget_plafond (jaar, regio, gemeente, plafond_bedrag, basis_bedrag, plekken)
+    VALUES (${p.jaar}, ${p.regio}, ${p.gemeente}, ${p.plafond_bedrag}, ${p.basis_bedrag}, ${p.plekken})`;
 }
 
 export async function deletePlafond(id: number): Promise<void> {

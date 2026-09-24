@@ -1,13 +1,14 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState } from "react";
-import type { GlobalFilters, RegioFilter } from "@/lib/types";
+import type { BudgetBasis, GlobalFilters, RegioFilter } from "@/lib/types";
 
 interface FilterCtx extends GlobalFilters {
   setRegio: (r: RegioFilter) => void;
   setJaar: (j: number | null) => void;
   setMaand: (m: number | null) => void;
   setRange: (van: string | null, tot: string | null) => void;
+  setBudgetBasis: (b: BudgetBasis) => void;
   reset: () => void;
 }
 
@@ -24,6 +25,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
   const [maand, setMaand] = useState<number | null>(null);
   const [van, setVan] = useState<string | null>(null);
   const [tot, setTot] = useState<string | null>(null);
+  const [budgetBasis, setBudgetBasis] = useState<BudgetBasis>("incl");
 
   const value = useMemo<FilterCtx>(
     () => ({
@@ -32,6 +34,8 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
       maand,
       van,
       tot,
+      budgetBasis,
+      setBudgetBasis,
       setRegio,
       setJaar: (j) => {
         setJaar(j);
@@ -54,9 +58,10 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         setMaand(null);
         setVan(null);
         setTot(null);
+        setBudgetBasis("incl");
       },
     }),
-    [regio, jaar, maand, van, tot]
+    [regio, jaar, maand, van, tot, budgetBasis]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

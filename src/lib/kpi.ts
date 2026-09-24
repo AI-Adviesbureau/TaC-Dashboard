@@ -2,12 +2,15 @@ import "server-only";
 import { sql } from "./db";
 import { addGemeenteFilter, realisatieTmExpr } from "./filter-sql";
 import { ensureTrajectUniekView, TRAJECT_BRON } from "./schema";
+import { plafondTotaal, type BudgetBasis } from "./budget";
 
 export interface Filters {
   regio?: string | null;
   jaar?: number | null;
   /** "t/m maand" (cumulatief gedeclareerd), zoals het gemeentedashboard. */
   maand?: number | null;
+  /** Noemer voor budgetverbruik: toegekend incl. speling of basisbudget. */
+  budgetBasis?: BudgetBasis | null;
   van?: string | null; // custom periode (intake vanaf)
   tot?: string | null; // custom periode (intake t/m)
   gemeente?: string | string[] | null;
@@ -138,25 +141,12 @@ async function budgetRealisatie(
   if (!f.jaar) {
     return { realisatie: kc.gerealiseerd, plafond: null, pct: null };
   }
-  const params: unknown[] = [];
-  const conds: string[] = [];
-  if (f.jaar) {
-    params.push(f.jaar);
-    conds.push(`jaar = $${params.length}`);
-  }
-  if (f.regio && f.regio !== "Totaal") {
-    params.push(f.regio);
-    conds.push(`(regio = $${params.length} OR regio IS NULL)`);
-  }
-  addGemeenteFilter(f.gemeente, "", (cond, val) => {
-    params.push(val);
-    conds.push(cond(params.length));
+  const { bedrag: plafond } = await plafondTotaal({
+    jaar: f.jaar,
+    regio: f.regio,
+    gemeente: f.gemeente,
+    basis: f.budgetBasis,
   });
-  const clause = conds.length ? "WHERE " + conds.join(" AND ") : "";
-  const text = `SELECT coalesce(sum(plafond_bedrag), 0) AS plafond, count(*)::int AS n FROM budget_plafond ${clause}`;
-  const rows = (await sql.query(text, params)) as { plafond: number; n: number }[];
-  const heeftPlafond = Number(rows[0].n) > 0;
-  const plafond = heeftPlafond ? Number(rows[0].plafond) : null;
   return {
     realisatie: kc.gerealiseerd,
     plafond,

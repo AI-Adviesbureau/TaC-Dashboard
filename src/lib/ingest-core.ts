@@ -314,7 +314,8 @@ export async function createSchema() {
 
   await sql`CREATE TABLE IF NOT EXISTS budget_plafond (
       id SERIAL PRIMARY KEY, jaar INT NOT NULL, regio TEXT, gemeente TEXT,
-      plafond_bedrag NUMERIC, plekken INT)`;
+      plafond_bedrag NUMERIC, basis_bedrag NUMERIC, plekken INT)`;
+  await sql`ALTER TABLE budget_plafond ADD COLUMN IF NOT EXISTS basis_bedrag NUMERIC`;
   await sql`CREATE TABLE IF NOT EXISTS code_omschrijving (code TEXT PRIMARY KEY, omschrijving TEXT)`;
   await sql`CREATE TABLE IF NOT EXISTS behandelaar_naam (initialen TEXT PRIMARY KEY, naam TEXT)`;
   await sql`DROP TABLE IF EXISTS code_norm`;

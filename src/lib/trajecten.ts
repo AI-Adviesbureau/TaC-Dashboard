@@ -3,6 +3,7 @@ import { sql } from "./db";
 import type { Filters } from "./kpi";
 import { addGemeenteFilter, realisatieTmExpr } from "./filter-sql";
 import { ensureTrajectUniekView, TRAJECT_BRON } from "./schema";
+import { ensureBudgetKolom } from "./budget";
 import type { TrajectRow } from "./types";
 
 export type { TrajectRow };
@@ -171,7 +172,8 @@ export async function getKosten(f: Filters) {
     plafondParams.push(f.regio);
     pConds.push(`(regio = $${plafondParams.length} OR regio IS NULL)`);
   }
-  const plafondText = `SELECT jaar, regio, gemeente, plafond_bedrag, plekken FROM budget_plafond ${
+  await ensureBudgetKolom();
+  const plafondText = `SELECT jaar, regio, gemeente, plafond_bedrag, basis_bedrag, plekken FROM budget_plafond ${
     pConds.length ? "WHERE " + pConds.join(" AND ") : ""
   } ORDER BY gemeente NULLS FIRST`;
   const plafonds = (await sql.query(plafondText, plafondParams)) as Record<string, unknown>[];
@@ -201,6 +203,7 @@ export async function getKosten(f: Filters) {
       regio: (r.regio as string) ?? null,
       gemeente: (r.gemeente as string) ?? null,
       plafond_bedrag: r.plafond_bedrag === null ? null : Number(r.plafond_bedrag),
+      basis_bedrag: r.basis_bedrag === null || r.basis_bedrag === undefined ? null : Number(r.basis_bedrag),
       plekken: r.plekken === null ? null : Number(r.plekken),
     })),
   };
