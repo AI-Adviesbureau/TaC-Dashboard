@@ -166,19 +166,30 @@ De restverschillen komen doordat onze Excel actueler is dan het gemeentedashboar
 en door gemeente-toewijzing van enkele cliënten.
 
 ### Budget: basis vs. speling — schakelaar "Budgetbasis"
-De gemeente rekent verbruik tegen het **basisbudget € 483.960** (+ speling
-€ 300.000 = € 783.960). Anniek's plafonds ("toegekend incl. afwijking", € 793.000
-totaal) liggen op het niveau *incl. speling*. Daarom is er een schakelaar
-(Overzicht, Kosten & budget, Jeugdmonitor) met i-uitleg:
-- **Toegekend incl. speling** (standaard): kolom `plafond_bedrag` per gemeente.
-- **Basisbudget (gemeente)**: kolom `basis_bedrag`. Per gemeente invulbaar in
-  Beheer → Budgetplafonds. Zolang niet alle gemeenten een basisbudget hebben,
-  valt het totaal terug op een regio-/totaalrij (gemeente leeg); voor 2026
-  Noord-Limburg is die gevuld met € 483.960. Per-gemeente percentages tonen dan
-  "—" tot het basisbudget per gemeente bekend is.
+De gemeente rekent verbruik tegen het **basisbudget**; daarbovenop geldt per
+gemeente **€ 50.000 speling**. Anniek leverde op 6 oktober 2026 de basisbudgetten
+per gemeente aan (haar eerdere "toegekend incl. afwijking"-lijst bleek exact
+basis + 50.000, dus beide bronnen zijn consistent). Venlo kreeg een ophoging.
+
+| Gemeente | Basis 2026 | Incl. speling 2026 | Basis 2027 | Incl. speling 2027 |
+| --- | --- | --- | --- | --- |
+| Venlo | € 440.000 (opgehoogd) | € 490.000 | € 423.000 | € 473.000 |
+| Peel en Maas | € 50.000 | € 100.000 | € 15.000 | € 65.000 |
+| Horst aan de Maas | € 40.000 | € 90.000 | € 10.000 | € 60.000 |
+| Beesel | € 10.000 | € 60.000 | € 0 | € 50.000 |
+| Venray | € 4.000 | € 54.000 | € 0 | € 50.000 |
+| Bergen | € 0 | € 50.000 | € 0 | € 50.000 |
+| Gennep | € 0 | € 50.000 | € 0 | € 50.000 |
+| **Totaal** | **€ 544.000** | **€ 894.000** | **€ 448.000** | **€ 798.000** |
+
+Schakelaar (Overzicht, Kosten & budget, Jeugdmonitor) met i-uitleg:
+- **Toegekend incl. speling** (standaard): kolom `plafond_bedrag` = basis + 50.000.
+- **Basisbudget (gemeente)**: kolom `basis_bedrag` — de noemer van het
+  gemeentedashboard. Nu per gemeente gevuld; de tijdelijke regio-totaalrij
+  (€ 483.960, het gemeentecijfer van vóór de Venlo-ophoging) is verwijderd.
 - Regels (`src/lib/budget.ts`): gemeente-rijen en regio-rijen worden nooit
-  opgeteld; met een gemeentefilter telt alleen de gemeente-rij.
-▸ Vraag aan Anniek: basisbudget per gemeente (excl. speling) aanleveren.
+  opgeteld; met een gemeentefilter telt alleen de gemeente-rij. Een regio-rij
+  (gemeente leeg) dient alleen als fallback zolang gemeenten ontbreken.
 
 ### Zorgvorm-indeling (zoals de gemeente)
 Afgeleid uit de reconciliatie per productcode (tabel `code_zorgvorm`, per code
