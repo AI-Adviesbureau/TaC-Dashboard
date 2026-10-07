@@ -248,13 +248,20 @@ export async function getMonitor(f: Filters): Promise<MonitorData> {
   const tm = f.maand ?? (jaar === nu.getFullYear() ? Math.max(1, Math.min(12, nu.getMonth())) : 12);
   const vorigJaar = jaar - 1;
 
-  const [huidig, vorig, gemeenten, maandRijen, zorgvormen] = await Promise.all([
+  const vorigJaarAfgerond = vorigJaar < nu.getFullYear();
+  const [huidig, vorig, gemeenten, maandRijen, zorgvormen, vorigHeelJaar] = await Promise.all([
     kern(f, jaar, tm),
     kern(f, vorigJaar, tm),
     perGemeente(f, jaar, tm),
     perMaand(f, [jaar, vorigJaar]),
     perZorgvorm(f, jaar, vorigJaar, tm),
+    vorigJaarAfgerond ? kern(f, vorigJaar, 12) : Promise.resolve(null),
   ]);
+  // Voor een afgerond vorig jaar is de "prognose" gewoon de werkelijke jaarrealisatie.
+  if (vorigHeelJaar) {
+    vorig.prognose = vorigHeelJaar.realisatie;
+    vorig.prognosePct = vorigHeelJaar.prognosePct;
+  }
 
   const dit = maandRijen.find((r) => r.bron_jaar === jaar);
   const vor = maandRijen.find((r) => r.bron_jaar === vorigJaar);

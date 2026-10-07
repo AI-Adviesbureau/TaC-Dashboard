@@ -429,6 +429,8 @@ export async function getFilterOpties(
   gemeenten: string[];
   codes: string[];
   behandelaren: string[];
+  /** Beschikbare Excel-lijsten (bron_jaar), nieuwste eerst. */
+  jaren: number[];
 }> {
   const g =
     jaar != null
@@ -458,13 +460,15 @@ export async function getFilterOpties(
     jaar != null
       ? sql`SELECT DISTINCT behandelaar_primair FROM traject WHERE behandelaar_primair IS NOT NULL AND bron_jaar = ${jaar} ORDER BY behandelaar_primair`
       : sql`SELECT DISTINCT behandelaar_primair FROM traject WHERE behandelaar_primair IS NOT NULL ORDER BY behandelaar_primair`;
-  const [c, b] = await Promise.all([
+  const [c, b, j] = await Promise.all([
     codeQuery as unknown as Promise<{ code: string }[]>,
     behQuery as unknown as Promise<{ behandelaar_primair: string }[]>,
+    sql`SELECT DISTINCT bron_jaar FROM traject ORDER BY bron_jaar DESC` as unknown as Promise<{ bron_jaar: number }[]>,
   ]);
   return {
     gemeenten: g.map((r) => r.gemeente),
     codes: c.map((r) => r.code),
     behandelaren: b.map((r) => r.behandelaar_primair),
+    jaren: j.map((r) => Number(r.bron_jaar)),
   };
 }

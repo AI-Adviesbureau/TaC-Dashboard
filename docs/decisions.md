@@ -220,6 +220,12 @@ Ingest normaliseert codes nu naar hoofdletters en weigert datums in de codekolom
   gedeclareerd), per-gemeente tabel, vergelijking met vorig jaar (zelfde t/m-maand).
 - CLI-ingest werkte niet meer (`server-only` in `schema.ts`); opgelost.
 - Nieuwe Excel (t/m sept 2026) ingeladen: 3.606 rijen, 1.909 cliënten; 2026-lijst 522 rijen.
+- Review-ronde 7 okt 2026: i-uitleg Budgetbasis bijgewerkt naar basis + € 50.000
+  speling per gemeente; Jeugdmonitor toont voor een afgerond vorig jaar de werkelijke
+  jaarrealisatie als "prognose" (geen extrapolatie meer); de jaarkiezer haalt de
+  beschikbare lijsten uit de data (`/api/options` → `jaren`), zodat 2027 na een
+  upload vanzelf verschijnt; Beheer → Budgetplafonds biedt ook volgend jaar aan;
+  view-aanmaak tolereert een gelijktijdige start (Postgres 42P07).
 
 ## Bewuste UX-keuze: datum leeg na refresh
 

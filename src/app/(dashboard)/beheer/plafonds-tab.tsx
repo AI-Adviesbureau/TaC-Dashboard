@@ -17,11 +17,15 @@ interface Plafond {
   plekken: number | null;
 }
 
-const JAREN = ["2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019"];
+/** Volgend jaar t/m 2019: budgetten worden vooruit aangeleverd. */
+const JAREN = Array.from(
+  { length: new Date().getFullYear() + 1 - 2019 + 1 },
+  (_, i) => String(new Date().getFullYear() + 1 - i)
+);
 
 export function PlafondsTab() {
   const [rows, setRows] = useState<Plafond[] | null>(null);
-  const [jaar, setJaar] = useState("2026");
+  const [jaar, setJaar] = useState(String(new Date().getFullYear()));
   const [regio, setRegio] = useState("");
   const [gemeente, setGemeente] = useState("");
   const [bedrag, setBedrag] = useState("");

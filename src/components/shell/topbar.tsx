@@ -9,7 +9,11 @@ import { GemeentePicker } from "@/components/filters/gemeente-picker";
 import { MODULES } from "@/lib/config/modules";
 import { cn } from "@/lib/cn";
 
-const JAREN = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019];
+/** Fallback tot de beschikbare lijsten uit de data zijn geladen. */
+const JAREN_FALLBACK = Array.from(
+  { length: new Date().getFullYear() - 2019 + 1 },
+  (_, i) => new Date().getFullYear() - i
+);
 
 export function Topbar({ naam }: { naam: string | null }) {
   const pathname = usePathname();
@@ -65,7 +69,21 @@ function RegioSwitch() {
 function PeriodPicker() {
   const f = useFilters();
   const [open, setOpen] = useState(false);
+  const [jaren, setJaren] = useState<number[]>(JAREN_FALLBACK);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Beschikbare Excel-lijsten ophalen, zodat een nieuw jaar (bv. 2027) na een
+  // upload vanzelf in de kiezer verschijnt.
+  useEffect(() => {
+    const ac = new AbortController();
+    fetch("/api/options", { signal: ac.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { jaren?: number[] } | null) => {
+        if (d?.jaren?.length) setJaren(d.jaren);
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, []);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -123,7 +141,7 @@ function PeriodPicker() {
             Kiest de Excel-lijst van dat jaar. KPI&apos;s tellen alleen trajecten op dat tabblad.
           </p>
           <div className="grid grid-cols-4 gap-1.5">
-            {JAREN.map((j) => (
+            {jaren.map((j) => (
               <button
                 key={j}
                 onClick={() => f.setJaar(f.jaar === j ? null : j)}

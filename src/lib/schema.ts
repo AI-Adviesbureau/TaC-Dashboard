@@ -69,6 +69,15 @@ export const TRAJECT_UNIEK_VIEW_SQL = `
 /** Kolom waaraan de nieuwste view-versie herkend wordt (migratiecheck). */
 const VIEW_VERSIE_KOLOM = "r12";
 
+/** CREATE VIEW die een gelijktijdige aanmaak (race) tolereert: 42P07 = bestaat al. */
+async function createViewSafe(text: string) {
+  try {
+    await sql.query(text.trim(), []);
+  } catch (e) {
+    if ((e as { code?: string })?.code !== "42P07") throw e;
+  }
+}
+
 let viewsReady: Promise<void> | null = null;
 
 /** Dropt en herbouwt de views onvoorwaardelijk (na een (her)ingest). */
@@ -76,8 +85,8 @@ export async function recreateViews() {
   viewsReady = null;
   await sql`DROP VIEW IF EXISTS traject_uniek`;
   await sql`DROP VIEW IF EXISTS traject_lijst`;
-  await sql.query(TRAJECT_LIJST_VIEW_SQL.trim(), []);
-  await sql.query(TRAJECT_UNIEK_VIEW_SQL.trim(), []);
+  await createViewSafe(TRAJECT_LIJST_VIEW_SQL);
+  await createViewSafe(TRAJECT_UNIEK_VIEW_SQL);
   viewsReady = Promise.resolve();
 }
 
@@ -100,8 +109,8 @@ export async function ensureTrajectUniekView() {
 
       await sql`DROP VIEW IF EXISTS traject_uniek`;
       await sql`DROP VIEW IF EXISTS traject_lijst`;
-      await sql.query(TRAJECT_LIJST_VIEW_SQL.trim(), []);
-      await sql.query(TRAJECT_UNIEK_VIEW_SQL.trim(), []);
+      await createViewSafe(TRAJECT_LIJST_VIEW_SQL);
+      await createViewSafe(TRAJECT_UNIEK_VIEW_SQL);
     })().catch((e) => {
       viewsReady = null;
       throw e;
